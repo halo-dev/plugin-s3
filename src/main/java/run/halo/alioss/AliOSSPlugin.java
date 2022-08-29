@@ -1,32 +1,28 @@
-package run.halo.template;
+package run.halo.alioss;
 
 import org.pf4j.PluginWrapper;
 import org.springframework.stereotype.Component;
-import run.halo.app.extension.Scheme;
 import run.halo.app.extension.SchemeManager;
 import run.halo.app.plugin.BasePlugin;
 
 /**
- * @author guqing
+ * @author johnniang
  * @since 2.0.0
  */
 @Component
-public class TemplatePlugin extends BasePlugin {
+public class AliOSSPlugin extends BasePlugin {
     private final SchemeManager schemeManager;
 
-    public TemplatePlugin(PluginWrapper wrapper) {
+    public AliOSSPlugin(PluginWrapper wrapper) {
         super(wrapper);
         this.schemeManager = getApplicationContext().getBean(SchemeManager.class);
     }
 
     @Override
     public void start() {
-        schemeManager.register(Apple.class);
     }
 
     @Override
     public void stop() {
-        Scheme scheme = schemeManager.get(Apple.class);
-        schemeManager.unregister(scheme);
     }
 }

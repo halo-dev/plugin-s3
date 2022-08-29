@@ -1,11 +1,10 @@
 plugins {
     id 'org.springframework.boot' version '3.0.0-M3'
     id 'io.spring.dependency-management' version '1.0.11.RELEASE'
-    id "com.github.node-gradle.node" version "3.3.0"
     id 'java'
 }
 
-group 'run.halo.template'
+group 'run.halo.alioss'
 version '0.0.1-SNAPSHOT'
 sourceCompatibility = JavaVersion.VERSION_17
 
@@ -37,6 +36,10 @@ dependencies {
     compileOnly "io.swagger.core.v3:swagger-core-jakarta:2.2.0"
     compileOnly 'org.springframework.boot:spring-boot-starter-webflux'
     annotationProcessor 'io.github.guqing:pluggable-suite:0.0.1-SNAPSHOT'
+    implementation "com.aliyun.oss:aliyun-sdk-oss:3.15.0"
+    implementation "javax.xml.bind:jaxb-api:2.3.1"
+    implementation "javax.activation:activation:1.1.1"
+    implementation "org.glassfish.jaxb:jaxb-runtime:2.3.3"
 
     compileOnly files("lib/halo-2.0.0-SNAPSHOT-plain.jar")
 
@@ -49,24 +52,4 @@ dependencies {
 
 test {
     useJUnitPlatform()
-}
-
-node {
-    nodeProjectDir = file("${project.projectDir}/admin-frontend")
-}
-
-task buildFrontend(type: NpxTask) {
-    command = 'pnpm'
-    args = ['build']
-}
-
-task pnpmInstall(type: NpxTask) {
-    command = "pnpm"
-    args = ["install"]
-}
-
-build {
-    // build frontend before build
-    tasks.getByName('compileJava').dependsOn('buildFrontend')
-    tasks.getByName("buildFrontend").dependsOn("pnpmInstall")
 }
