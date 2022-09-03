@@ -7,11 +7,11 @@ spec:
   version: 0.0.1-SNAPSHOT
   requires: "*"
   author: halo-dev
-  logo: https://halo.run/logo
+  logo: data:image/svg+xml;base64,PHN2ZyByb2xlPSJpbWciIHZpZXdCb3g9IjAgMCAyNCAyNCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48dGl0bGU+QWxpYmFiYSBDbG91ZDwvdGl0bGU+PHBhdGggZmlsbD0iI0ZGNkEwMCIgZD0iTTMuOTk2IDQuNTE3aDUuMjkxTDguMDEgNi4zMjQgNC4xNTMgNy41MDZhMS42NjggMS42NjggMCAwIDAtMS4xNjUgMS42MDF2NS43ODZhMS42NjggMS42NjggMCAwIDAgMS4xNjUgMS42bDMuODU3IDEuMTgzIDEuMjc3IDEuODA3SDMuOTk2QTMuOTk2IDMuOTk2IDAgMCAxIDAgMTUuNDg3VjguNTEzYTMuOTk2IDMuOTk2IDAgMCAxIDMuOTk2LTMuOTk2bTE2LjAwOCAwaC01LjI5MWwxLjI3NyAxLjgwNyAzLjg1NyAxLjE4MmMuNzE1LjIyNyAxLjE3Ljg4OSAxLjE2NSAxLjYwMXY1Ljc4NmExLjY2OCAxLjY2OCAwIDAgMS0xLjE2NSAxLjZsLTMuODU3IDEuMTgzLTEuMjc3IDEuODA3aDUuMjkxQTMuOTk2IDMuOTk2IDAgMCAwIDI0IDE1LjQ4N1Y4LjUxM2EzLjk5NiAzLjk5NiAwIDAgMC0zLjk5Ni0zLjk5Nm0tNC4wMDcgOC4zNDVIOC4wMDJ2LTEuODA0aDcuOTk1WiIvPjwvc3ZnPg==
   settingName: alioss-settings
   configMapName: alioss-configMap
   homepage: https://github.com/halo-sigs/plugin-alioss
   displayName: "阿里云 OSS"
-  description: "TODO"
+  description: "提供阿里云 OSS 的存储策略"
   license:
     - name: "MIT"
