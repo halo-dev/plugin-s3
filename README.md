@@ -8,6 +8,10 @@
 git clone git@github.com:halo-sigs/plugin-alioss.git
 ```
 
+```bash
+./gradlew build
+```
+
 修改 Halo 的配置文件
 
 ```yaml
