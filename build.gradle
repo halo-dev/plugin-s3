@@ -1,6 +1,6 @@
 plugins {
-    id 'org.springframework.boot' version '3.0.0-M3'
-    id 'io.spring.dependency-management' version '1.0.11.RELEASE'
+    id 'org.springframework.boot' version '3.0.0-M4'
+    id 'io.spring.dependency-management' version '1.0.12.RELEASE'
     id 'java'
 }
 
@@ -32,6 +32,7 @@ jar {
 }
 
 dependencies {
+    implementation 'org.springframework.boot:spring-boot-starter-test'
     compileOnly 'io.github.guqing:pluggable-suite:0.0.1-SNAPSHOT'
     compileOnly "io.swagger.core.v3:swagger-core-jakarta:2.2.0"
     compileOnly 'org.springframework.boot:spring-boot-starter-webflux'
