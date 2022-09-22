@@ -3,11 +3,12 @@ kind: Setting
 metadata:
   name: alioss-settings
 spec:
-  - group: basic
-    label: 基本设置
-    formSchema:
-      - $formkit: text
-        help: This will be used for your account.
-        label: Email
-        name: email
-        validation: required|email
+  forms: 
+    - group: basic
+      label: 基本设置
+      formSchema:
+        - $formkit: text
+          help: This will be used for your account.
+          label: Email
+          name: email
+          validation: required|email

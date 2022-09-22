@@ -12,41 +12,42 @@ kind: Setting
 metadata:
   name: alioss-policy-template-setting
 spec:
-  - group: default
-    formSchema:
-      - $formkit: text
-        name: bucket
-        label: Bucket
-        validation: required
-      - $formkit: text
-        name: endpoint
-        label: EndPoint
-        validation: required
-      - $formkit: password
-        name: accessKey
-        label: Access Key
-        validation: required
-      - $formkit: password
-        name: accessSecret
-        label: Access Secret
-        validation: required
-      - $formkit: text
-        name: location
-        label: 上传目录
-        placeholder: 如不填写，则默认上传到根目录
-      - $formkit: select
-        name: protocol
-        label: 绑定域名协议
-        options:
-          - label: HTTPS
-            value: https
-          - label: HTTP
-            value: http
-      - $formkit: text
-        name: domain
-        label: 绑定域名
-        placeholder: 如不设置，那么将使用 Bucket + EndPoint 作为域名
-      - $formkit: textarea
-        name: allow_extensions
-        label: 允许上传的文件类型
-        placeholder: 使用半角逗号分隔
+  forms: 
+    - group: default
+      formSchema:
+        - $formkit: text
+          name: bucket
+          label: Bucket
+          validation: required
+        - $formkit: text
+          name: endpoint
+          label: EndPoint
+          validation: required
+        - $formkit: password
+          name: accessKey
+          label: Access Key
+          validation: required
+        - $formkit: password
+          name: accessSecret
+          label: Access Secret
+          validation: required
+        - $formkit: text
+          name: location
+          label: 上传目录
+          placeholder: 如不填写，则默认上传到根目录
+        - $formkit: select
+          name: protocol
+          label: 绑定域名协议
+          options:
+            - label: HTTPS
+              value: https
+            - label: HTTP
+              value: http
+        - $formkit: text
+          name: domain
+          label: 绑定域名
+          placeholder: 如不设置，那么将使用 Bucket + EndPoint 作为域名
+        - $formkit: textarea
+          name: allow_extensions
+          label: 允许上传的文件类型
+          placeholder: 使用半角逗号分隔
