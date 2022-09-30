@@ -5,7 +5,6 @@ plugins {
 }
 
 group 'run.halo.alioss'
-version '0.0.1-SNAPSHOT'
 sourceCompatibility = JavaVersion.VERSION_17
 
 repositories {
