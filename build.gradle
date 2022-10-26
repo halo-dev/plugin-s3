@@ -1,6 +1,7 @@
 plugins {
     id 'org.springframework.boot' version '3.0.0-M4'
     id 'io.spring.dependency-management' version '1.0.12.RELEASE'
+    id "io.github.guqing.plugin-development" version "0.0.5-SNAPSHOT"
     id 'java'
 }
 
@@ -20,9 +21,6 @@ bootJar {
 jar {
     enabled = true
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
-    manifest.attributes(
-            'Plugin-Version': "${project.version}",
-    )
     from {
         configurations.runtimeClasspath.collect {
             it.isDirectory() ? it : zipTree(it)
@@ -31,17 +29,15 @@ jar {
 }
 
 dependencies {
-    implementation 'org.springframework.boot:spring-boot-starter-test'
-    compileOnly 'io.github.guqing:pluggable-suite:0.0.1-SNAPSHOT'
+    compileOnly "org.pf4j:pf4j:3.6.0"
     compileOnly "io.swagger.core.v3:swagger-core-jakarta:2.2.0"
     compileOnly 'org.springframework.boot:spring-boot-starter-webflux'
-    annotationProcessor 'io.github.guqing:pluggable-suite:0.0.1-SNAPSHOT'
+    compileOnly files("lib/halo-2.0.0-SNAPSHOT-plain.jar")
+    implementation 'org.springframework.boot:spring-boot-starter-test'
     implementation "com.aliyun.oss:aliyun-sdk-oss:3.15.0"
     implementation "javax.xml.bind:jaxb-api:2.3.1"
     implementation "javax.activation:activation:1.1.1"
     implementation "org.glassfish.jaxb:jaxb-runtime:2.3.3"
-
-    compileOnly files("lib/halo-2.0.0-SNAPSHOT-plain.jar")
 
     compileOnly 'org.projectlombok:lombok'
     annotationProcessor 'org.projectlombok:lombok'
