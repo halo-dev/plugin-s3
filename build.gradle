@@ -1,7 +1,5 @@
 plugins {
-    id 'org.springframework.boot' version '3.0.0-M4'
-    id 'io.spring.dependency-management' version '1.0.12.RELEASE'
-    id "io.github.guqing.plugin-development" version "0.0.5-SNAPSHOT"
+    id "io.github.guqing.plugin-development" version "0.0.6-SNAPSHOT"
     id 'java'
 }
 
@@ -9,13 +7,9 @@ group 'run.halo.alioss'
 sourceCompatibility = JavaVersion.VERSION_17
 
 repositories {
-    maven { url 'https://s01.oss.sonatype.org/content/repositories/snapshots' }
+    maven { url 'https://s01.oss.sonatype.org/content/repositories/releases' }
     maven { url 'https://repo.spring.io/milestone' }
     mavenCentral()
-}
-
-bootJar {
-    enabled = false
 }
 
 jar {
@@ -29,21 +23,23 @@ jar {
 }
 
 dependencies {
-    compileOnly "org.pf4j:pf4j:3.6.0"
-    compileOnly "io.swagger.core.v3:swagger-core-jakarta:2.2.0"
-    compileOnly 'org.springframework.boot:spring-boot-starter-webflux'
+    compileOnly platform("run.halo.dependencies:halo-dependencies:1.0.0")
+
     compileOnly files("lib/halo-2.0.0-SNAPSHOT-plain.jar")
-    implementation 'org.springframework.boot:spring-boot-starter-test'
+
     implementation "com.aliyun.oss:aliyun-sdk-oss:3.15.0"
     implementation "javax.xml.bind:jaxb-api:2.3.1"
     implementation "javax.activation:activation:1.1.1"
     implementation "org.glassfish.jaxb:jaxb-runtime:2.3.3"
 
     compileOnly 'org.projectlombok:lombok'
-    annotationProcessor 'org.projectlombok:lombok'
+    annotationProcessor 'org.projectlombok:lombok:1.18.22'
 
-    testImplementation 'org.junit.jupiter:junit-jupiter-api:5.8.1'
-    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.8.1'
+    testImplementation platform("run.halo.dependencies:halo-dependencies:1.0.0")
+    testImplementation files("lib/halo-2.0.0-SNAPSHOT-plain.jar")
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    testImplementation 'org.junit.jupiter:junit-jupiter-api:5.9.0'
+    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.9.0'
 }
 
 test {

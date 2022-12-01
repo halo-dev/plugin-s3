@@ -192,11 +192,11 @@ public class AliOssAttachmentHandler implements AttachmentHandler {
 
     boolean shouldHandle(Policy policy) {
         if (policy == null || policy.getSpec() == null ||
-            policy.getSpec().getTemplateRef() == null) {
+            policy.getSpec().getTemplateName() == null) {
             return false;
         }
-        var templateRef = policy.getSpec().getTemplateRef();
-        return "alioss".equals(templateRef.getName());
+        String templateName = policy.getSpec().getTemplateName();
+        return "alioss".equals(templateName);
     }
 
     record ObjectDetail(String bucketName, String objectName, ObjectMetadata objectMetadata) {
