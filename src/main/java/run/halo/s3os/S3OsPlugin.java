@@ -1,4 +1,4 @@
-package run.halo.alioss;
+package run.halo.s3os;
 
 import org.pf4j.PluginWrapper;
 import org.springframework.stereotype.Component;
@@ -9,9 +9,9 @@ import run.halo.app.plugin.BasePlugin;
  * @since 2.0.0
  */
 @Component
-public class AliOSSPlugin extends BasePlugin {
+public class S3OsPlugin extends BasePlugin {
 
-    public AliOSSPlugin(PluginWrapper wrapper) {
+    public S3OsPlugin(PluginWrapper wrapper) {
         super(wrapper);
     }
 

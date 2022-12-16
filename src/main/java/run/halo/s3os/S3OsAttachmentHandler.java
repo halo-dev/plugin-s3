@@ -1,24 +1,17 @@
-package run.halo.alioss;
+package run.halo.s3os;
 
-import com.aliyun.oss.ClientException;
-import com.aliyun.oss.OSS;
-import com.aliyun.oss.OSSClientBuilder;
-import com.aliyun.oss.OSSException;
-import com.aliyun.oss.internal.OSSHeaders;
-import com.aliyun.oss.model.CannedAccessControlList;
-import com.aliyun.oss.model.ObjectMetadata;
-import com.aliyun.oss.model.PutObjectRequest;
-import com.aliyun.oss.model.PutObjectResult;
-import com.aliyun.oss.model.StorageClass;
-import com.aliyun.oss.model.VoidResult;
-import java.io.IOException;
-import java.io.PipedInputStream;
-import java.io.PipedOutputStream;
-import java.nio.charset.StandardCharsets;
-import java.util.Map;
-import java.util.UUID;
-import java.util.function.Supplier;
+import com.amazonaws.AmazonServiceException;
+import com.amazonaws.SdkClientException;
+import com.amazonaws.auth.AWSStaticCredentialsProvider;
+import com.amazonaws.auth.BasicAWSCredentials;
+import com.amazonaws.client.builder.AwsClientBuilder;
+import com.amazonaws.services.s3.AmazonS3;
+import com.amazonaws.services.s3.AmazonS3ClientBuilder;
+import com.amazonaws.services.s3.model.ObjectMetadata;
+import com.amazonaws.services.s3.model.PutObjectRequest;
+import com.amazonaws.services.s3.model.PutObjectResult;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.StringUtils;
 import org.pf4j.Extension;
 import org.springframework.core.io.buffer.DataBufferUtils;
 import org.springframework.web.util.UriUtils;
@@ -34,11 +27,19 @@ import run.halo.app.extension.ConfigMap;
 import run.halo.app.extension.Metadata;
 import run.halo.app.infra.utils.JsonUtils;
 
+import java.io.IOException;
+import java.io.PipedInputStream;
+import java.io.PipedOutputStream;
+import java.nio.charset.StandardCharsets;
+import java.util.Map;
+import java.util.UUID;
+import java.util.function.Supplier;
+
 @Slf4j
 @Extension
-public class AliOssAttachmentHandler implements AttachmentHandler {
+public class S3OsAttachmentHandler implements AttachmentHandler {
 
-    private static final String OBJECT_KEY = "alioss.plugin.halo.run/object-key";
+    private static final String OBJECT_KEY = "s3os.plugin.halo.run/object-key";
 
     @Override
     public Mono<Attachment> upload(UploadContext uploadContext) {
@@ -60,38 +61,36 @@ public class AliOssAttachmentHandler implements AttachmentHandler {
                 }
                 var objectName = annotations.get(OBJECT_KEY);
                 var properties = getProperties(deleteContext.configMap());
-                var oss = buildOss(properties);
+                var client = buildOsClient(properties);
                 ossExecute(() -> {
-                    log.info("{}/{} is being deleted from AliOSS", properties.getBucket(),
+                    log.info("{}/{} is being deleted from S3ObjectStorage", properties.getBucket(),
                         objectName);
-                    VoidResult result = oss.deleteObject(properties.getBucket(), objectName);
-                    if (log.isDebugEnabled()) {
-                        debug(result);
-                    }
-                    log.info("{}/{} was deleted successfully from AliOSS", properties.getBucket(),
+                    client.deleteObject(properties.getBucket(), objectName);
+                    log.info("{}/{} was deleted successfully from S3ObjectStorage", properties.getBucket(),
                         objectName);
-                    return result;
-                }, oss::shutdown);
+                    return null;
+                }, client::shutdown);
             }).map(DeleteContext::attachment);
     }
 
     <T> T ossExecute(Supplier<T> runnable, Runnable finalizer) {
         try {
             return runnable.get();
-        } catch (OSSException oe) {
+        } catch (AmazonServiceException ase) {
             log.error("""
-                Caught an OSSException, which means your request made it to OSS, but was 
+                Caught an AmazonServiceException, which means your request made it to S3ObjectStorage, but was 
                 rejected with an error response for some reason. 
-                Error message: {}, error code: {}, request id: {}, host id: {}
-                """, oe.getErrorCode(), oe.getErrorCode(), oe.getRequestId(), oe.getHostId());
-            throw Exceptions.propagate(oe);
-        } catch (ClientException ce) {
+                Error message: {}
+                """, ase.getMessage());
+            throw Exceptions.propagate(ase);
+        } catch (SdkClientException sce) {
             log.error("""
-                Caught an ClientException, which means the client encountered a serious internal 
-                problem while trying to communicate with OSS, such as not being able to access 
+                Caught an SdkClientException, which means the client encountered a serious internal 
+                problem while trying to communicate with S3ObjectStorage, such as not being able to access 
                 the network.
-                """);
-            throw Exceptions.propagate(ce);
+                Error message: {}
+                """, sce.getMessage());
+            throw Exceptions.propagate(sce);
         } finally {
             if (finalizer != null) {
                 finalizer.run();
@@ -99,16 +98,20 @@ public class AliOssAttachmentHandler implements AttachmentHandler {
         }
     }
 
-    AliOssProperties getProperties(ConfigMap configMap) {
+    S3OsProperties getProperties(ConfigMap configMap) {
         var settingJson = configMap.getData().getOrDefault("default", "{}");
-        return JsonUtils.jsonToObject(settingJson, AliOssProperties.class);
+        return JsonUtils.jsonToObject(settingJson, S3OsProperties.class);
     }
 
-    Attachment buildAttachment(UploadContext uploadContext, AliOssProperties properties,
+    Attachment buildAttachment(UploadContext uploadContext, S3OsProperties properties,
                                ObjectDetail objectDetail) {
-        var host = properties.getBucket() + "." + properties.getEndpoint();
-        var externalLink =
-            properties.getProtocol() + "://" + host + "/" + objectDetail.objectName();
+        String externalLink;
+        if (StringUtils.isBlank(properties.getDomain())) {
+            var host = properties.getBucket() + "." + properties.getEndpoint();
+            externalLink = properties.getProtocol() + "://" + host + "/" + objectDetail.objectName();
+        } else {
+            externalLink = properties.getProtocol() + "://" + properties.getDomain() + "/" + objectDetail.objectName();
+        }
 
         var metadata = new Metadata();
         metadata.setName(UUID.randomUUID().toString());
@@ -128,14 +131,20 @@ public class AliOssAttachmentHandler implements AttachmentHandler {
         return attachment;
     }
 
-    OSS buildOss(AliOssProperties properties) {
-        return new OSSClientBuilder().build(properties.getEndpoint(), properties.getAccessKey(),
-            properties.getAccessSecret());
+    AmazonS3 buildOsClient(S3OsProperties properties) {
+        return AmazonS3ClientBuilder.standard()
+                .withCredentials(new AWSStaticCredentialsProvider(
+                        new BasicAWSCredentials(properties.getAccessKey(), properties.getAccessSecret())))
+                .withEndpointConfiguration(
+                        new AwsClientBuilder.EndpointConfiguration(properties.getEndpoint(),properties.getRegion()))
+                .withPathStyleAccessEnabled(false)
+                .withChunkedEncodingDisabled(true)
+                .build();
     }
 
-    Mono<ObjectDetail> upload(UploadContext uploadContext, AliOssProperties properties) {
+    Mono<ObjectDetail> upload(UploadContext uploadContext, S3OsProperties properties) {
         return Mono.fromCallable(() -> {
-            var client = buildOss(properties);
+            var client = buildOsClient(properties);
             // build object name
             var objectName = properties.getObjectName(uploadContext.file().filename());
 
@@ -152,14 +161,11 @@ public class AliOssAttachmentHandler implements AttachmentHandler {
                 }).subscribe(DataBufferUtils.releaseConsumer());
 
             final var bucket = properties.getBucket();
-            log.info("Uploading {} into AliOSS {}/{}/{}", uploadContext.file().filename(),
+            log.info("Uploading {} into S3ObjectStorage {}/{}/{}", uploadContext.file().filename(),
                 properties.getEndpoint(), bucket, objectName);
 
-            var request = new PutObjectRequest(bucket, objectName, pis);
-            var metadata = new ObjectMetadata();
-            metadata.setHeader(OSSHeaders.OSS_STORAGE_CLASS, StorageClass.Standard.toString());
-            metadata.setObjectAcl(CannedAccessControlList.PublicRead);
-            request.setMetadata(metadata);
+            var request = new PutObjectRequest(bucket, objectName, pis,
+                    new ObjectMetadata());
 
             return ossExecute(() -> {
                 var result = client.putObject(request);
@@ -174,20 +180,11 @@ public class AliOssAttachmentHandler implements AttachmentHandler {
 
     void debug(PutObjectResult result) {
         log.debug("""
-                PutObjectResult: request id: {}, version id: {}, server CRC: {}, 
-                client CRC: {}, etag: {}, response status: {}, response headers: {}, response body: {}
-                """, result.getRequestId(), result.getVersionId(), result.getServerCRC(),
-            result.getClientCRC(), result.getETag(), result.getResponse().getStatusCode(),
-            result.getResponse().getHeaders(), result.getResponse().getErrorResponseAsString());
-    }
-
-    void debug(VoidResult result) {
-        log.debug("""
-                VoidResult: request id: {}, server CRC: {}, 
-                client CRC: {}, response status: {}, response headers: {}, response body: {}
-                """, result.getRequestId(), result.getServerCRC(), result.getClientCRC(),
-            result.getResponse().getStatusCode(), result.getResponse().getHeaders(),
-            result.getResponse().getErrorResponseAsString());
+                PutObjectResult: VersionId: {}, ETag: {}, ContentMd5: {}, ExpirationTime: {}, ExpirationTimeRuleId: {}, 
+                response RawMetadata: {}, UserMetadata: {}
+                """, result.getVersionId(), result.getETag(), result.getContentMd5(), result.getExpirationTime(),
+                result.getExpirationTimeRuleId(), result.getMetadata().getRawMetadata(),
+                result.getMetadata().getUserMetadata());
     }
 
     boolean shouldHandle(Policy policy) {
@@ -196,7 +193,7 @@ public class AliOssAttachmentHandler implements AttachmentHandler {
             return false;
         }
         String templateName = policy.getSpec().getTemplateName();
-        return "alioss".equals(templateName);
+        return "s3os".equals(templateName);
     }
 
     record ObjectDetail(String bucketName, String objectName, ObjectMetadata objectMetadata) {

@@ -1,14 +1,14 @@
 apiVersion: v1alpha1
 kind: Setting
 metadata:
-  name: alioss-settings
+  name: s3os-settings
 spec:
   forms: 
     - group: basic
       label: 基本设置
       formSchema:
         - $formkit: text
-          help: This will be used for your account.
-          label: Email
-          name: email
-          validation: required|email
+          help: 请前往 “附件 - 存储策略” 添加策略
+          label: 此处不用设置，请前往 “附件 - 存储策略” 添加策略
+          name: text
+          placeholder: 此处不用设置，请前往 “附件 - 存储策略” 添加策略
