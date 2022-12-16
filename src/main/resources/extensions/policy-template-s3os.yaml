@@ -3,7 +3,7 @@ kind: PolicyTemplate
 metadata:
   name: s3os
 spec:
-  displayName: S3ObjectStorage
+  displayName: S3 Object Storage
   settingName: s3os-policy-template-setting
 ---
 apiVersion: v1alpha1
