@@ -1,12 +1,8 @@
-# plugin-alioss
+# halo-plugin-s3os
 
-为 Halo 2.0 提供阿里云 OSS 的存储策略
+为 Halo 2.0 提供 S3 协议的对象存储策略，兼容阿里云、腾讯云、七牛云等
 
 ## 开发环境
-
-```bash
-git clone git@github.com:halo-sigs/plugin-alioss.git
-```
 
 ```bash
 ./gradlew build
@@ -38,9 +34,9 @@ plugin:
 
 ## 使用方法
 
-> 目前设置了 GitHub Action 的 Push 构建，你可以在 https://github.com/halo-sigs/plugin-alioss/actions 的每个构建详情中下载最新构建的 JAR 文件。然后在 Halo 后台的插件管理上传即可。
+> 目前设置了 GitHub Action 的 Push 构建，你可以在 https://github.com/longjuan/halo-plugin-s3os/actions 的每个构建详情中下载最新构建的 JAR 文件。然后在 Halo 后台的插件管理上传即可。
 
 - 上传并启用插件。
 - 进入后台附件管理。
-- 点击右上角的存储策略，在存储策略弹框的右上角可新建阿里云 OSS 存储策略。
-- 创建完成之后即可在上传的时候选择新创建的阿里云 OSS 存储策略。
+- 点击右上角的存储策略，在存储策略弹框的右上角可新建 S3 Object Storage 存储策略。
+- 创建完成之后即可在上传的时候选择新创建的 S3 Object Storage 存储策略。
