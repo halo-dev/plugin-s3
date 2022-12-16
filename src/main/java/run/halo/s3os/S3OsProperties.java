@@ -43,10 +43,12 @@ class S3OsProperties {
     }
 
     public void setDomain(String domain) {
-        if (domain.toLowerCase().startsWith("http://")){
-            domain = domain.substring(7);
-        } else if (domain.toLowerCase().startsWith("https://")) {
-            domain = domain.substring(8);
+        if (domain != null){
+            if (domain.toLowerCase().startsWith("http://")){
+                domain = domain.substring(7);
+            } else if (domain.toLowerCase().startsWith("https://")) {
+                domain = domain.substring(8);
+            }
         }
         this.domain = domain;
     }
