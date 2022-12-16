@@ -1,22 +1,22 @@
 apiVersion: storage.halo.run/v1alpha1
 kind: PolicyTemplate
 metadata:
-  name: alioss
+  name: s3os
 spec:
-  displayName: Aliyun OSS
-  settingName: alioss-policy-template-setting
+  displayName: S3 Object Storage
+  settingName: s3os-policy-template-setting
 ---
 apiVersion: v1alpha1
 kind: Setting
 metadata:
-  name: alioss-policy-template-setting
+  name: s3os-policy-template-setting
 spec:
   forms:
     - group: default
       formSchema:
         - $formkit: text
           name: bucket
-          label: Bucket
+          label: Bucket 桶名称
           validation: required
         - $formkit: text
           name: endpoint
@@ -31,6 +31,11 @@ spec:
           label: Access Secret
           validation: required
         - $formkit: text
+          name: region
+          label: Region
+          placeholder: 如不填写，则默认为"Auto"
+          help: 若Region为Auto无法使用，才需要填写对应Region
+        - $formkit: text
           name: location
           label: 上传目录
           placeholder: 如不填写，则默认上传到根目录
@@ -44,8 +49,9 @@ spec:
               value: http
         - $formkit: text
           name: domain
-          label: 绑定域名
+          label: 绑定域名（CDN域名）
           placeholder: 如不设置，那么将使用 Bucket + EndPoint 作为域名
+          help: 协议头请在上方设置，此处无需以"http://"或"https://"开头，系统会自动拼接
         - $formkit: textarea
           name: allow_extensions
           label: 允许上传的文件类型

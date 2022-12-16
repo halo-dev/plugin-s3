@@ -3,7 +3,7 @@ plugins {
     id 'java'
 }
 
-group 'run.halo.alioss'
+group 'run.halo.s3os'
 sourceCompatibility = JavaVersion.VERSION_17
 
 repositories {
@@ -27,7 +27,8 @@ dependencies {
 
     compileOnly files("lib/halo-2.0.0-SNAPSHOT-plain.jar")
 
-    implementation "com.aliyun.oss:aliyun-sdk-oss:3.15.0"
+    implementation platform('com.amazonaws:aws-java-sdk-bom:1.11.1000')
+    implementation 'com.amazonaws:aws-java-sdk-s3'
     implementation "javax.xml.bind:jaxb-api:2.3.1"
     implementation "javax.activation:activation:1.1.1"
     implementation "org.glassfish.jaxb:jaxb-runtime:2.3.3"
