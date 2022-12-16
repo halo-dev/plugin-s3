@@ -27,7 +27,7 @@ jobs:
           version=${version#v}
           sed -i "s/version=.*-SNAPSHOT$/version=$version/1" gradle.properties
           ./gradlew clean build -x test
-      - name: Archive plugin-alioss jar
+      - name: Archive halo-plugin-s3os jar
         uses: actions/upload-artifact@v2
         with:
           name: halo-plugin-s3os
@@ -40,7 +40,7 @@ jobs:
     needs: build
     if: github.event_name == 'release'
     steps:
-      - name: Download plugin-alioss jar
+      - name: Download halo-plugin-s3os jar
         uses: actions/download-artifact@v2
         with:
           name: halo-plugin-s3os
