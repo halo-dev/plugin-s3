@@ -30,7 +30,7 @@ jobs:
       - name: Archive plugin-alioss jar
         uses: actions/upload-artifact@v2
         with:
-          name: plugin-alioss
+          name: halo-plugin-s3os
           path: |
             build/libs/*.jar
           retention-days: 1
@@ -43,7 +43,7 @@ jobs:
       - name: Download plugin-alioss jar
         uses: actions/download-artifact@v2
         with:
-          name: plugin-alioss
+          name: halo-plugin-s3os
           path: build/libs
       - name: Get Name of Artifact
         id: get_artifact
