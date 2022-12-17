@@ -8,6 +8,8 @@ class S3OsProperties {
 
     private String bucket;
 
+    private Protocol endpointProtocol = Protocol.https;
+
     private String endpoint;
 
     private String accessKey;
@@ -43,14 +45,7 @@ class S3OsProperties {
     }
 
     public void setDomain(String domain) {
-        if (domain != null){
-            if (domain.toLowerCase().startsWith("http://")){
-                domain = domain.substring(7);
-            } else if (domain.toLowerCase().startsWith("https://")) {
-                domain = domain.substring(8);
-            }
-        }
-        this.domain = domain;
+        this.domain = removeHttpProtocolHeader(domain);
     }
 
     public void setLocation(String location) {
@@ -74,5 +69,20 @@ class S3OsProperties {
         }else {
             this.region = region;
         }
+    }
+
+    public void setEndpoint(String endpoint) {
+        this.endpoint = removeHttpProtocolHeader(endpoint);
+    }
+
+    private static String removeHttpProtocolHeader(String url){
+        if (url != null){
+            if (url.toLowerCase().startsWith("http://")){
+                url = url.substring(7);
+            } else if (url.toLowerCase().startsWith("https://")) {
+                url = url.substring(8);
+            }
+        }
+        return url;
     }
 }
