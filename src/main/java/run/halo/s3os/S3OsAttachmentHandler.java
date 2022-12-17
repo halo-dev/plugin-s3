@@ -136,7 +136,9 @@ public class S3OsAttachmentHandler implements AttachmentHandler {
                 .withCredentials(new AWSStaticCredentialsProvider(
                         new BasicAWSCredentials(properties.getAccessKey(), properties.getAccessSecret())))
                 .withEndpointConfiguration(
-                        new AwsClientBuilder.EndpointConfiguration(properties.getEndpoint(),properties.getRegion()))
+                        new AwsClientBuilder.EndpointConfiguration(
+                                properties.getEndpointProtocol() + "://" + properties.getEndpoint(),
+                                properties.getRegion()))
                 .withPathStyleAccessEnabled(false)
                 .withChunkedEncodingDisabled(true)
                 .build();

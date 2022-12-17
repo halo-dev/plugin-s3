@@ -18,6 +18,15 @@ spec:
           name: bucket
           label: Bucket 桶名称
           validation: required
+        - $formkit: select
+          name: endpoint_protocol
+          label: Endpoint 访问协议
+          options:
+            - label: HTTPS
+              value: https
+            - label: HTTP
+              value: http
+          validation: required
         - $formkit: text
           name: endpoint
           label: EndPoint
@@ -47,6 +56,7 @@ spec:
               value: https
             - label: HTTP
               value: http
+          validation: required
         - $formkit: text
           name: domain
           label: 绑定域名（CDN域名）
