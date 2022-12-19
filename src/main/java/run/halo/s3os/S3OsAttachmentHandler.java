@@ -14,6 +14,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.pf4j.Extension;
 import org.springframework.core.io.buffer.DataBufferUtils;
+import org.springframework.http.MediaType;
+import org.springframework.http.MediaTypeFactory;
 import org.springframework.web.util.UriUtils;
 import reactor.core.Exceptions;
 import reactor.core.publisher.Mono;
@@ -148,7 +150,8 @@ public class S3OsAttachmentHandler implements AttachmentHandler {
         return Mono.fromCallable(() -> {
             var client = buildOsClient(properties);
             // build object name
-            var objectName = properties.getObjectName(uploadContext.file().filename());
+            var originFilename = uploadContext.file().filename();
+            var objectName = properties.getObjectName(originFilename);
 
             var pos = new PipedOutputStream();
             var pis = new PipedInputStream(pos);
@@ -163,11 +166,14 @@ public class S3OsAttachmentHandler implements AttachmentHandler {
                 }).subscribe(DataBufferUtils.releaseConsumer());
 
             final var bucket = properties.getBucket();
-            log.info("Uploading {} into S3ObjectStorage {}/{}/{}", uploadContext.file().filename(),
-                properties.getEndpoint(), bucket, objectName);
-
+            var metadata = new ObjectMetadata();
+            var contentType = MediaTypeFactory.getMediaType(originFilename)
+                    .orElse(MediaType.APPLICATION_OCTET_STREAM).toString();
+            metadata.setContentType(contentType);
             var request = new PutObjectRequest(bucket, objectName, pis,
-                    new ObjectMetadata());
+                    metadata);
+            log.info("Uploading {} into S3ObjectStorage {}/{}/{}", originFilename,
+                properties.getEndpoint(), bucket, objectName);
 
             return ossExecute(() -> {
                 var result = client.putObject(request);
