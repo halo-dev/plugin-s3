@@ -28,7 +28,6 @@ class S3OsProperties {
      */
     private String domain;
 
-    private String allowExtensions;
 
     private String region = "Auto";
 

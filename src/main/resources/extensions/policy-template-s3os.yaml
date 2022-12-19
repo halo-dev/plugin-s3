@@ -31,6 +31,7 @@ spec:
           name: endpoint
           label: EndPoint
           validation: required
+          help: 协议头请在上方设置，此处无需以"http://"或"https://"开头，系统会自动拼接
         - $formkit: password
           name: accessKey
           label: Access Key
@@ -62,7 +63,3 @@ spec:
           label: 绑定域名（CDN域名）
           placeholder: 如不设置，那么将使用 Bucket + EndPoint 作为域名
           help: 协议头请在上方设置，此处无需以"http://"或"https://"开头，系统会自动拼接
-        - $formkit: textarea
-          name: allow_extensions
-          label: 允许上传的文件类型
-          placeholder: 使用半角逗号分隔
