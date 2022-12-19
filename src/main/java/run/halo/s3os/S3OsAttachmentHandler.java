@@ -170,8 +170,7 @@ public class S3OsAttachmentHandler implements AttachmentHandler {
             var contentType = MediaTypeFactory.getMediaType(originFilename)
                     .orElse(MediaType.APPLICATION_OCTET_STREAM).toString();
             metadata.setContentType(contentType);
-            var request = new PutObjectRequest(bucket, objectName, pis,
-                    metadata);
+            var request = new PutObjectRequest(bucket, objectName, pis, metadata);
             log.info("Uploading {} into S3ObjectStorage {}/{}/{}", originFilename,
                 properties.getEndpoint(), bucket, objectName);
 
