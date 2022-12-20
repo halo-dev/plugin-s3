@@ -27,7 +27,7 @@ dependencies {
 
     compileOnly files("lib/halo-2.0.0-SNAPSHOT-plain.jar")
 
-    implementation platform('com.amazonaws:aws-java-sdk-bom:1.11.1000')
+    implementation platform('com.amazonaws:aws-java-sdk-bom:1.12.360')
     implementation 'com.amazonaws:aws-java-sdk-s3'
     implementation "javax.xml.bind:jaxb-api:2.3.1"
     implementation "javax.activation:activation:1.1.1"
