@@ -44,7 +44,7 @@ class S3OsProperties {
     }
 
     public void setDomain(String domain) {
-        this.domain = removeHttpProtocolHeader(domain);
+        this.domain = UrlUtils.removeHttpPrefix(domain);
     }
 
     public void setLocation(String location) {
@@ -71,17 +71,6 @@ class S3OsProperties {
     }
 
     public void setEndpoint(String endpoint) {
-        this.endpoint = removeHttpProtocolHeader(endpoint);
-    }
-
-    private static String removeHttpProtocolHeader(String url){
-        if (url != null){
-            if (url.toLowerCase().startsWith("http://")){
-                url = url.substring(7);
-            } else if (url.toLowerCase().startsWith("https://")) {
-                url = url.substring(8);
-            }
-        }
-        return url;
+        this.endpoint = UrlUtils.removeHttpPrefix(endpoint);
     }
 }
