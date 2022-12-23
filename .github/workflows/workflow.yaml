@@ -27,10 +27,10 @@ jobs:
           version=${version#v}
           sed -i "s/version=.*-SNAPSHOT$/version=$version/1" gradle.properties
           ./gradlew clean build -x test
-      - name: Archive halo-plugin-s3os jar
+      - name: Archive plugin-s3 jar
         uses: actions/upload-artifact@v2
         with:
-          name: halo-plugin-s3os
+          name: plugin-s3
           path: |
             build/libs/*.jar
           retention-days: 1
@@ -40,10 +40,10 @@ jobs:
     needs: build
     if: github.event_name == 'release'
     steps:
-      - name: Download halo-plugin-s3os jar
+      - name: Download plugin-s3 jar
         uses: actions/download-artifact@v2
         with:
-          name: halo-plugin-s3os
+          name: plugin-s3
           path: build/libs
       - name: Get Name of Artifact
         id: get_artifact
