@@ -143,7 +143,7 @@ public class S3OsAttachmentHandler implements AttachmentHandler {
                     return uploadContext.file().content();
                 })
                 // buffer to part
-                .bufferUntil((buffer) -> {
+                .windowUntil((buffer) -> {
                     uploadState.buffered += buffer.readableByteCount();
                     if (uploadState.buffered >= MULTIPART_MIN_PART_SIZE) {
                         uploadState.buffered = 0;
@@ -152,9 +152,11 @@ public class S3OsAttachmentHandler implements AttachmentHandler {
                         return false;
                     }
                 })
-                .map(S3OsAttachmentHandler::concatBuffers)
                 // upload part
-                .flatMap((buffer) -> uploadPart(uploadState, buffer, s3client))
+                .concatMap((window) -> window.collectList().flatMap((bufferList) -> {
+                    var buffer = S3OsAttachmentHandler.concatBuffers(bufferList);
+                    return uploadPart(uploadState, buffer, s3client);
+                }))
                 .reduce(uploadState, (state, completedPart) -> {
                     state.completedParts.put(completedPart.partNumber(), completedPart);
                     return state;
