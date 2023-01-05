@@ -1,5 +1,6 @@
 package run.halo.s3os;
 
+import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.pf4j.Extension;
@@ -247,6 +248,7 @@ public class S3OsAttachmentHandler implements AttachmentHandler {
     record ObjectDetail(String bucketName, String objectKey, HeadObjectResponse objectMetadata) {
     }
 
+    @Data
     static class UploadState {
         String bucket;
         String objectKey;
@@ -254,54 +256,6 @@ public class S3OsAttachmentHandler implements AttachmentHandler {
         int partCounter;
         Map<Integer, CompletedPart> completedParts = new HashMap<>();
         int buffered = 0;
-
-        public String getBucket() {
-            return bucket;
-        }
-
-        public void setBucket(String bucket) {
-            this.bucket = bucket;
-        }
-
-        public String getObjectKey() {
-            return objectKey;
-        }
-
-        public void setObjectKey(String objectKey) {
-            this.objectKey = objectKey;
-        }
-
-        public String getUploadId() {
-            return uploadId;
-        }
-
-        public void setUploadId(String uploadId) {
-            this.uploadId = uploadId;
-        }
-
-        public int getPartCounter() {
-            return partCounter;
-        }
-
-        public void setPartCounter(int partCounter) {
-            this.partCounter = partCounter;
-        }
-
-        public Map<Integer, CompletedPart> getCompletedParts() {
-            return completedParts;
-        }
-
-        public void setCompletedParts(Map<Integer, CompletedPart> completedParts) {
-            this.completedParts = completedParts;
-        }
-
-        public int getBuffered() {
-            return buffered;
-        }
-
-        public void setBuffered(int buffered) {
-            this.buffered = buffered;
-        }
 
         UploadState(String bucket, String objectKey) {
             this.bucket = bucket;
