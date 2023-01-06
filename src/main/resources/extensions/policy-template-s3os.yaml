@@ -19,7 +19,7 @@ spec:
           label: Bucket 桶名称
           validation: required
         - $formkit: select
-          name: endpoint_protocol
+          name: endpointProtocol
           label: Endpoint 访问协议
           options:
             - label: HTTPS
