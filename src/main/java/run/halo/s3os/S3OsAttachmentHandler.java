@@ -23,6 +23,7 @@ import software.amazon.awssdk.core.SdkResponse;
 import software.amazon.awssdk.core.async.AsyncRequestBody;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3AsyncClient;
+import software.amazon.awssdk.services.s3.S3Configuration;
 import software.amazon.awssdk.services.s3.model.*;
 
 import java.net.URI;
@@ -116,6 +117,7 @@ public class S3OsAttachmentHandler implements AttachmentHandler {
                 .region(Region.of(properties.getRegion()))
                 .endpointOverride(URI.create(properties.getEndpointProtocol() + "://" + properties.getEndpoint()))
                 .credentialsProvider(() -> AwsBasicCredentials.create(properties.getAccessKey(), properties.getAccessSecret()))
+                .serviceConfiguration(S3Configuration.builder().chunkedEncodingEnabled(false).build())
                 .build();
     }
 
