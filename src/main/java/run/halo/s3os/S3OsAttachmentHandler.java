@@ -1,25 +1,15 @@
 package run.halo.s3os;
 
-import com.amazonaws.AmazonServiceException;
-import com.amazonaws.SdkClientException;
-import com.amazonaws.auth.AWSStaticCredentialsProvider;
-import com.amazonaws.auth.BasicAWSCredentials;
-import com.amazonaws.client.builder.AwsClientBuilder;
-import com.amazonaws.services.s3.AmazonS3;
-import com.amazonaws.services.s3.AmazonS3ClientBuilder;
-import com.amazonaws.services.s3.model.ObjectMetadata;
-import com.amazonaws.services.s3.model.PutObjectRequest;
-import com.amazonaws.services.s3.model.PutObjectResult;
+import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.pf4j.Extension;
-import org.springframework.core.io.buffer.DataBufferUtils;
+import org.springframework.core.io.buffer.DataBuffer;
 import org.springframework.http.MediaType;
 import org.springframework.http.MediaTypeFactory;
+import org.springframework.web.server.ServerErrorException;
 import org.springframework.web.util.UriUtils;
-import reactor.core.Exceptions;
 import reactor.core.publisher.Mono;
-import reactor.core.scheduler.Schedulers;
 import run.halo.app.core.extension.attachment.Attachment;
 import run.halo.app.core.extension.attachment.Attachment.AttachmentSpec;
 import run.halo.app.core.extension.attachment.Constant;
@@ -28,76 +18,64 @@ import run.halo.app.core.extension.attachment.endpoint.AttachmentHandler;
 import run.halo.app.extension.ConfigMap;
 import run.halo.app.extension.Metadata;
 import run.halo.app.infra.utils.JsonUtils;
+import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
+import software.amazon.awssdk.core.SdkResponse;
+import software.amazon.awssdk.core.async.AsyncRequestBody;
+import software.amazon.awssdk.regions.Region;
+import software.amazon.awssdk.services.s3.S3AsyncClient;
+import software.amazon.awssdk.services.s3.S3Configuration;
+import software.amazon.awssdk.services.s3.model.*;
 
-import java.io.IOException;
-import java.io.PipedInputStream;
-import java.io.PipedOutputStream;
+import java.net.URI;
+import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
+import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import java.util.function.Supplier;
 
 @Slf4j
 @Extension
 public class S3OsAttachmentHandler implements AttachmentHandler {
 
     private static final String OBJECT_KEY = "s3os.plugin.halo.run/object-key";
+    private static final int MULTIPART_MIN_PART_SIZE = 5 * 1024 * 1024;
 
     @Override
     public Mono<Attachment> upload(UploadContext uploadContext) {
         return Mono.just(uploadContext).filter(context -> this.shouldHandle(context.policy()))
-            .flatMap(context -> {
-                final var properties = getProperties(context.configMap());
-                return upload(context, properties).map(
-                    objectDetail -> this.buildAttachment(context, properties, objectDetail));
-            });
+                .flatMap(context -> {
+                    final var properties = getProperties(context.configMap());
+                    return upload(context, properties).map(
+                            objectDetail -> this.buildAttachment(context, properties, objectDetail));
+                });
     }
 
     @Override
     public Mono<Attachment> delete(DeleteContext deleteContext) {
         return Mono.just(deleteContext).filter(context -> this.shouldHandle(context.policy()))
-            .doOnNext(context -> {
-                var annotations = context.attachment().getMetadata().getAnnotations();
-                if (annotations == null || !annotations.containsKey(OBJECT_KEY)) {
-                    return;
-                }
-                var objectName = annotations.get(OBJECT_KEY);
-                var properties = getProperties(deleteContext.configMap());
-                var client = buildOsClient(properties);
-                ossExecute(() -> {
-                    log.info("{}/{} is being deleted from S3ObjectStorage", properties.getBucket(),
-                        objectName);
-                    client.deleteObject(properties.getBucket(), objectName);
-                    log.info("{}/{} was deleted successfully from S3ObjectStorage", properties.getBucket(),
-                        objectName);
-                    return null;
-                }, client::shutdown);
-            }).map(DeleteContext::attachment);
-    }
+                .flatMap(context -> {
+                    var annotations = context.attachment().getMetadata().getAnnotations();
+                    if (annotations == null || !annotations.containsKey(OBJECT_KEY)) {
+                        return Mono.just(context);
+                    }
+                    var objectName = annotations.get(OBJECT_KEY);
+                    var properties = getProperties(deleteContext.configMap());
+                    var client = buildS3AsyncClient(properties);
+                    return Mono.fromFuture(client.deleteObject(DeleteObjectRequest.builder()
+                                    .bucket(properties.getBucket())
+                                    .key(objectName)
+                                    .build()))
+                            .doFinally(signalType -> client.close())
+                            .map(response -> {
+                                checkResult(response, "delete object");
+                                log.info("Delete object {} from bucket {} successfully",
+                                        objectName, properties.getBucket());
+                                return context;
+                            });
 
-    <T> T ossExecute(Supplier<T> runnable, Runnable finalizer) {
-        try {
-            return runnable.get();
-        } catch (AmazonServiceException ase) {
-            log.error("""
-                Caught an AmazonServiceException, which means your request made it to S3ObjectStorage, but was 
-                rejected with an error response for some reason. 
-                Error message: {}
-                """, ase.getMessage());
-            throw Exceptions.propagate(ase);
-        } catch (SdkClientException sce) {
-            log.error("""
-                Caught an SdkClientException, which means the client encountered a serious internal 
-                problem while trying to communicate with S3ObjectStorage, such as not being able to access 
-                the network.
-                Error message: {}
-                """, sce.getMessage());
-            throw Exceptions.propagate(sce);
-        } finally {
-            if (finalizer != null) {
-                finalizer.run();
-            }
-        }
+                })
+                .map(DeleteContext::attachment);
     }
 
     S3OsProperties getProperties(ConfigMap configMap) {
@@ -110,100 +88,183 @@ public class S3OsAttachmentHandler implements AttachmentHandler {
         String externalLink;
         if (StringUtils.isBlank(properties.getDomain())) {
             var host = properties.getBucket() + "." + properties.getEndpoint();
-            externalLink = properties.getProtocol() + "://" + host + "/" + objectDetail.objectName();
+            externalLink = properties.getProtocol() + "://" + host + "/" + objectDetail.objectKey();
         } else {
-            externalLink = properties.getProtocol() + "://" + properties.getDomain() + "/" + objectDetail.objectName();
+            externalLink = properties.getProtocol() + "://" + properties.getDomain() + "/" + objectDetail.objectKey();
         }
 
         var metadata = new Metadata();
         metadata.setName(UUID.randomUUID().toString());
         metadata.setAnnotations(
-            Map.of(OBJECT_KEY, objectDetail.objectName(), Constant.EXTERNAL_LINK_ANNO_KEY,
-                UriUtils.encodePath(externalLink, StandardCharsets.UTF_8)));
+                Map.of(OBJECT_KEY, objectDetail.objectKey(), Constant.EXTERNAL_LINK_ANNO_KEY,
+                        UriUtils.encodePath(externalLink, StandardCharsets.UTF_8)));
 
         var objectMetadata = objectDetail.objectMetadata();
         var spec = new AttachmentSpec();
-        spec.setSize(objectMetadata.getContentLength());
+        spec.setSize(objectMetadata.contentLength());
         spec.setDisplayName(uploadContext.file().filename());
-        spec.setMediaType(objectMetadata.getContentType());
+        spec.setMediaType(objectMetadata.contentType());
 
         var attachment = new Attachment();
         attachment.setMetadata(metadata);
         attachment.setSpec(spec);
+        log.info("Upload object {} to bucket {} successfully", objectDetail.objectKey(), properties.getBucket());
         return attachment;
     }
 
-    AmazonS3 buildOsClient(S3OsProperties properties) {
-        return AmazonS3ClientBuilder.standard()
-                .withCredentials(new AWSStaticCredentialsProvider(
-                        new BasicAWSCredentials(properties.getAccessKey(), properties.getAccessSecret())))
-                .withEndpointConfiguration(
-                        new AwsClientBuilder.EndpointConfiguration(
-                                properties.getEndpointProtocol() + "://" + properties.getEndpoint(),
-                                properties.getRegion()))
-                .withPathStyleAccessEnabled(false)
-                .withChunkedEncodingDisabled(true)
+    S3AsyncClient buildS3AsyncClient(S3OsProperties properties) {
+        return S3AsyncClient.builder()
+                .region(Region.of(properties.getRegion()))
+                .endpointOverride(URI.create(properties.getEndpointProtocol() + "://" + properties.getEndpoint()))
+                .credentialsProvider(() -> AwsBasicCredentials.create(properties.getAccessKey(), properties.getAccessSecret()))
+                .serviceConfiguration(S3Configuration.builder().chunkedEncodingEnabled(false).build())
                 .build();
     }
 
     Mono<ObjectDetail> upload(UploadContext uploadContext, S3OsProperties properties) {
-        return Mono.fromCallable(() -> {
-            var client = buildOsClient(properties);
-            // build object name
-            var originFilename = uploadContext.file().filename();
-            var objectName = properties.getObjectName(originFilename);
+        var s3client = buildS3AsyncClient(properties);
 
-            var pos = new PipedOutputStream();
-            var pis = new PipedInputStream(pos);
-            DataBufferUtils.write(uploadContext.file().content(), pos)
-                .subscribeOn(Schedulers.boundedElastic()).doOnComplete(() -> {
-                    try {
-                        pos.close();
-                    } catch (IOException ioe) {
-                        // close the stream quietly
-                        log.warn("Failed to close output stream", ioe);
+        var originFilename = uploadContext.file().filename();
+        var objectKey = properties.getObjectName(originFilename);
+        var contentType = MediaTypeFactory.getMediaType(originFilename)
+                .orElse(MediaType.APPLICATION_OCTET_STREAM).toString();
+
+        var uploadState = new UploadState(properties.getBucket(), objectKey);
+
+        return Mono
+                // init multipart upload
+                .fromFuture(s3client.createMultipartUpload(
+                        CreateMultipartUploadRequest.builder()
+                                .bucket(properties.getBucket())
+                                .contentType(contentType)
+                                .key(objectKey)
+                                .build()))
+                .flatMapMany((response) -> {
+                    checkResult(response, "createMultipartUpload");
+                    uploadState.setUploadId(response.uploadId());
+                    return uploadContext.file().content();
+                })
+                // buffer to part
+                .windowUntil((buffer) -> {
+                    uploadState.buffered += buffer.readableByteCount();
+                    if (uploadState.buffered >= MULTIPART_MIN_PART_SIZE) {
+                        uploadState.buffered = 0;
+                        return true;
+                    } else {
+                        return false;
                     }
-                }).subscribe(DataBufferUtils.releaseConsumer());
-
-            final var bucket = properties.getBucket();
-            var metadata = new ObjectMetadata();
-            var contentType = MediaTypeFactory.getMediaType(originFilename)
-                    .orElse(MediaType.APPLICATION_OCTET_STREAM).toString();
-            metadata.setContentType(contentType);
-            var request = new PutObjectRequest(bucket, objectName, pis, metadata);
-            log.info("Uploading {} into S3ObjectStorage {}/{}/{}", originFilename,
-                properties.getEndpoint(), bucket, objectName);
-
-            return ossExecute(() -> {
-                var result = client.putObject(request);
-                if (log.isDebugEnabled()) {
-                    debug(result);
-                }
-                var objectMetadata = client.getObjectMetadata(bucket, objectName);
-                return new ObjectDetail(bucket, objectName, objectMetadata);
-            }, client::shutdown);
-        }).subscribeOn(Schedulers.boundedElastic());
+                })
+                // upload part
+                .concatMap((window) -> window.collectList().flatMap((bufferList) -> {
+                    var buffer = S3OsAttachmentHandler.concatBuffers(bufferList);
+                    return uploadPart(uploadState, buffer, s3client);
+                }))
+                .reduce(uploadState, (state, completedPart) -> {
+                    state.completedParts.put(completedPart.partNumber(), completedPart);
+                    return state;
+                })
+                // complete multipart upload
+                .flatMap((state) -> Mono
+                        .fromFuture(s3client.completeMultipartUpload(CompleteMultipartUploadRequest.builder()
+                                .bucket(state.bucket)
+                                .uploadId(state.uploadId)
+                                .multipartUpload(CompletedMultipartUpload.builder()
+                                        .parts(state.completedParts.values())
+                                        .build())
+                                .key(state.objectKey)
+                                .build())
+                        ))
+                // get object metadata
+                .flatMap((response) -> {
+                    checkResult(response, "completeUpload");
+                    return Mono.fromFuture(s3client.headObject(
+                            HeadObjectRequest.builder()
+                                    .bucket(properties.getBucket())
+                                    .key(objectKey)
+                                    .build()
+                    ));
+                })
+                // build object detail
+                .map((response) -> {
+                    checkResult(response, "getMetadata");
+                    return new ObjectDetail(properties.getBucket(), objectKey, response);
+                })
+                // close client
+                .doFinally((signalType) -> s3client.close());
     }
 
-    void debug(PutObjectResult result) {
-        log.debug("""
-                PutObjectResult: VersionId: {}, ETag: {}, ContentMd5: {}, ExpirationTime: {}, ExpirationTimeRuleId: {}, 
-                response RawMetadata: {}, UserMetadata: {}
-                """, result.getVersionId(), result.getETag(), result.getContentMd5(), result.getExpirationTime(),
-                result.getExpirationTimeRuleId(), result.getMetadata().getRawMetadata(),
-                result.getMetadata().getUserMetadata());
+
+    private Mono<CompletedPart> uploadPart(UploadState uploadState, ByteBuffer buffer, S3AsyncClient s3client) {
+        final int partNumber = ++uploadState.partCounter;
+        return Mono
+                .fromFuture(s3client.uploadPart(UploadPartRequest.builder()
+                                .bucket(uploadState.bucket)
+                                .key(uploadState.objectKey)
+                                .partNumber(partNumber)
+                                .uploadId(uploadState.uploadId)
+                                .contentLength((long) buffer.capacity())
+                                .build(),
+                        AsyncRequestBody.fromPublisher(Mono.just(buffer))))
+                .map((uploadPartResult) -> {
+                    checkResult(uploadPartResult, "uploadPart");
+                    return CompletedPart.builder()
+                            .eTag(uploadPartResult.eTag())
+                            .partNumber(partNumber)
+                            .build();
+                });
     }
+
+    private static void checkResult(SdkResponse result, String operation) {
+        log.info("operation: {}, result: {}", operation, result);
+        if (result.sdkHttpResponse() == null || !result.sdkHttpResponse().isSuccessful()) {
+            log.error("Failed to upload object, response: {}", result.sdkHttpResponse());
+            throw new ServerErrorException("对象存储响应错误，无法将对象上传到S3对象存储", null);
+        }
+    }
+
+    private static ByteBuffer concatBuffers(List<DataBuffer> buffers) {
+        int partSize = 0;
+        for (DataBuffer b : buffers) {
+            partSize += b.readableByteCount();
+        }
+
+        ByteBuffer partData = ByteBuffer.allocate(partSize);
+        buffers.forEach((buffer) -> {
+            partData.put(buffer.toByteBuffer());
+        });
+
+        // Reset read pointer to first byte
+        partData.rewind();
+
+        return partData;
+    }
+
 
     boolean shouldHandle(Policy policy) {
         if (policy == null || policy.getSpec() == null ||
-            policy.getSpec().getTemplateName() == null) {
+                policy.getSpec().getTemplateName() == null) {
             return false;
         }
         String templateName = policy.getSpec().getTemplateName();
         return "s3os".equals(templateName);
     }
 
-    record ObjectDetail(String bucketName, String objectName, ObjectMetadata objectMetadata) {
+    record ObjectDetail(String bucketName, String objectKey, HeadObjectResponse objectMetadata) {
+    }
+
+    @Data
+    static class UploadState {
+        String bucket;
+        String objectKey;
+        String uploadId;
+        int partCounter;
+        Map<Integer, CompletedPart> completedParts = new HashMap<>();
+        int buffered = 0;
+
+        UploadState(String bucket, String objectKey) {
+            this.bucket = bucket;
+            this.objectKey = objectKey;
+        }
     }
 
 }
