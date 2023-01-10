@@ -8,6 +8,7 @@ import org.springframework.core.io.buffer.DataBuffer;
 import org.springframework.http.MediaType;
 import org.springframework.http.MediaTypeFactory;
 import org.springframework.web.server.ServerErrorException;
+import org.springframework.web.server.ServerWebInputException;
 import org.springframework.web.util.UriUtils;
 import reactor.core.publisher.Mono;
 import run.halo.app.core.extension.attachment.Attachment;
@@ -21,6 +22,7 @@ import run.halo.app.infra.utils.JsonUtils;
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
 import software.amazon.awssdk.core.SdkResponse;
 import software.amazon.awssdk.core.async.AsyncRequestBody;
+import software.amazon.awssdk.http.SdkHttpResponse;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3AsyncClient;
 import software.amazon.awssdk.services.s3.S3Configuration;
@@ -33,6 +35,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 @Slf4j
 @Extension
@@ -40,6 +43,7 @@ public class S3OsAttachmentHandler implements AttachmentHandler {
 
     private static final String OBJECT_KEY = "s3os.plugin.halo.run/object-key";
     private static final int MULTIPART_MIN_PART_SIZE = 5 * 1024 * 1024;
+    private final Map<String, Object> uploadingFile = new ConcurrentHashMap<>();
 
     @Override
     public Mono<Attachment> upload(UploadContext uploadContext) {
@@ -122,23 +126,45 @@ public class S3OsAttachmentHandler implements AttachmentHandler {
     }
 
     Mono<ObjectDetail> upload(UploadContext uploadContext, S3OsProperties properties) {
-        var s3client = buildS3AsyncClient(properties);
-
         var originFilename = uploadContext.file().filename();
         var objectKey = properties.getObjectName(originFilename);
         var contentType = MediaTypeFactory.getMediaType(originFilename)
                 .orElse(MediaType.APPLICATION_OCTET_STREAM).toString();
+        var uploadingMapKey = properties.getBucket() + "/" + objectKey;
+        // deduplication of uploading files
+        if (uploadingFile.put(uploadingMapKey, uploadingMapKey) != null) {
+            return Mono.error(new ServerWebInputException("文件 " + originFilename + " 已存在，建议更名后重试。"));
+        }
+
+        var s3client = buildS3AsyncClient(properties);
 
         var uploadState = new UploadState(properties.getBucket(), objectKey);
 
         return Mono
+                // check whether file exists
+                .fromFuture(s3client.headObject(HeadObjectRequest.builder()
+                        .bucket(properties.getBucket())
+                        .key(objectKey)
+                        .build()))
+                .onErrorResume(NoSuchKeyException.class, e -> {
+                    var builder = HeadObjectResponse.builder();
+                    builder.sdkHttpResponse(SdkHttpResponse.builder().statusCode(404).build());
+                    return Mono.just(builder.build());
+                })
+                .flatMap(response -> {
+                    if (response != null && response.sdkHttpResponse() != null && response.sdkHttpResponse().isSuccessful()) {
+                        return Mono.error(new ServerWebInputException("文件 " + originFilename + " 已存在，建议更名后重试。"));
+                    }else {
+                        return Mono.just(uploadState);
+                    }
+                })
                 // init multipart upload
-                .fromFuture(s3client.createMultipartUpload(
+                .flatMap(state -> Mono.fromFuture(s3client.createMultipartUpload(
                         CreateMultipartUploadRequest.builder()
                                 .bucket(properties.getBucket())
                                 .contentType(contentType)
                                 .key(objectKey)
-                                .build()))
+                                .build())))
                 .flatMapMany((response) -> {
                     checkResult(response, "createMultipartUpload");
                     uploadState.setUploadId(response.uploadId());
@@ -190,7 +216,10 @@ public class S3OsAttachmentHandler implements AttachmentHandler {
                     return new ObjectDetail(properties.getBucket(), objectKey, response);
                 })
                 // close client
-                .doFinally((signalType) -> s3client.close());
+                .doFinally((signalType) -> {
+                    uploadingFile.remove(uploadingMapKey);
+                    s3client.close();
+                });
     }
 
 
