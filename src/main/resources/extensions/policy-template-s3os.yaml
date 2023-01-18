@@ -40,6 +40,7 @@ spec:
         - $formkit: text
           name: endpoint
           label: EndPoint
+          placeholder: 请填写不带bucket-name的Endpoint
           validation: required
           help: 协议头请在上方设置，此处无需以"http://"或"https://"开头，系统会自动拼接
         - $formkit: password
