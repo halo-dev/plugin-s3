@@ -27,6 +27,16 @@ spec:
             - label: HTTP
               value: http
           validation: required
+        - $formkit: select
+          name: enablePathStyleAccess
+          label: Endpoint 访问风格
+          options:
+            - label: Virtual Hosted Style
+              value: false
+            - label: Path Style
+              value: true
+          value: false
+          validation: required
         - $formkit: text
           name: endpoint
           label: EndPoint

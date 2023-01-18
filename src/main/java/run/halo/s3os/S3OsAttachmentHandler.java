@@ -116,8 +116,12 @@ public class S3OsAttachmentHandler implements AttachmentHandler {
         return S3AsyncClient.builder()
                 .region(Region.of(properties.getRegion()))
                 .endpointOverride(URI.create(properties.getEndpointProtocol() + "://" + properties.getEndpoint()))
-                .credentialsProvider(() -> AwsBasicCredentials.create(properties.getAccessKey(), properties.getAccessSecret()))
-                .serviceConfiguration(S3Configuration.builder().chunkedEncodingEnabled(false).build())
+                .credentialsProvider(() -> AwsBasicCredentials.create(properties.getAccessKey(),
+                        properties.getAccessSecret()))
+                .serviceConfiguration(S3Configuration.builder()
+                        .chunkedEncodingEnabled(false)
+                        .pathStyleAccessEnabled(properties.getEnablePathStyleAccess())
+                        .build())
                 .build();
     }
 
