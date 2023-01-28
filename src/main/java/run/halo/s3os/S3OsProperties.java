@@ -10,6 +10,8 @@ class S3OsProperties {
 
     private Protocol endpointProtocol = Protocol.https;
 
+    private Boolean enablePathStyleAccess = false;
+
     private String endpoint;
 
     private String accessKey;

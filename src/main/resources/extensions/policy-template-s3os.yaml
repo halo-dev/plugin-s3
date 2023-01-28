@@ -27,9 +27,20 @@ spec:
             - label: HTTP
               value: http
           validation: required
+        - $formkit: select
+          name: enablePathStyleAccess
+          label: Endpoint 访问风格
+          options:
+            - label: Virtual Hosted Style
+              value: false
+            - label: Path Style
+              value: true
+          value: false
+          validation: required
         - $formkit: text
           name: endpoint
           label: EndPoint
+          placeholder: 请填写不带bucket-name的Endpoint
           validation: required
           help: 协议头请在上方设置，此处无需以"http://"或"https://"开头，系统会自动拼接
         - $formkit: password
