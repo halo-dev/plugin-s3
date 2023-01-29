@@ -16,4 +16,4 @@ spec:
   displayName: "对象存储（Amazon S3 协议）"
   description: "提供兼容 Amazon S3 协议的对象存储策略，兼容阿里云、腾讯云、七牛云等"
   license:
-    - name: "MIT"
+    - name: "GPL-3.0"
