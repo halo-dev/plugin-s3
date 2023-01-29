@@ -14,7 +14,7 @@
 
 ### Endpoint 访问风格
 
-请根据下方表格中的兼容访问风格选择，若您的服务商不在表格中，请自行查看服务商的s3兼容性文档或自行尝试
+请根据下方表格中的兼容访问风格选择，若您的服务商不在表格中，请自行查看服务商的 s3 兼容性文档或自行尝试。
 
 > 风格说明：<br/>
 > 当Endpoint填写`s3.example.com`时<br/>
@@ -23,25 +23,25 @@
 
 ### Endpoint
 
-此处统一填写**不带**bucket-name的Endpoint，SDK会自动处理访问风格
+此处统一填写**不带** bucket-name 的 Endpoint，SDK 会自动处理访问风格。
 
-s3协议的Endpoint可在服务商的文档中搜索s3、Endpoint、访问域名等的关键词，一般与服务商自己的Endpoint相同
+想了解 s3 协议的 Endpoint 的配置可在服务商的文档中搜索 s3、Endpoint 或访问域名等关键词，一般与服务商自己的 Endpoint 相同。
 
-> 例如百度云提供`s3.bj.bcebos.com` 和 `<bucket-name>.s3.bj.bcebos.com` 两种Endpoint，请填写`s3.bj.bcebos.com`
+> 例如百度云提供 `s3.bj.bcebos.com` 和 `<bucket-name>.s3.bj.bcebos.com` 两种 Endpoint，请填写`s3.bj.bcebos.com`。
 
 ### Access Key & Access Secret
 
-与服务商自己Api的Access Key、Access Secret相同，详情查看对应服务商的文档
+与服务商自己 API 的 Access Key 和 Access Secret 相同，详情查看对应服务商的文档。
 
 ### Bucket 桶名称
 
-与服务商的控制台中的桶名称一致
+与服务商的控制台中的桶名称一致。
 
 ### Region
 
-一般留空即可
+一般留空即可。
 
-> 若确认过其他配置正确又不能访问，请在服务商的文档中查看并填写英文的Region，例如`cn-east-1`
+> 若确认过其他配置正确又不能访问，请在服务商的文档中查看并填写英文的 Region，例如 `cn-east-1`。
 
 ## 部分对象存储服务商兼容性
 
@@ -58,7 +58,7 @@ s3协议的Endpoint可在服务商的文档中搜索s3、Endpoint、访问域名
 |自建minio|\-|Path Style|✅|
 |华为云|文档未说明是否兼容，工单反馈不保证兼容性，实际测试可以使用|Virtual Hosted Style|❓|
 |Ucloud|只支持 8MB 大小的分片，本插件暂不支持<br>[https://docs.ucloud.cn/ufile/s3/s3\_introduction](https://docs.ucloud.cn/ufile/s3/s3_introduction)|\-|❎|
-|又拍云|暂不支持s3协议|\-|❎|
+|又拍云|暂不支持 s3 协议|\-|❎|
 
 ## 开发环境
 
