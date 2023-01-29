@@ -16,9 +16,9 @@
 
 请根据下方表格中的兼容访问风格选择，若您的服务商不在表格中，请自行查看服务商的s3兼容性文档或自行尝试
 
-> 风格说明：
-> 当Endpoint填写`s3.example.com`时
-> Path Style：SDK将访问`s3.example.com/<bucket-name>/<object-key>`
+> 风格说明：<br/>
+> 当Endpoint填写`s3.example.com`时<br/>
+> Path Style：SDK将访问`s3.example.com/<bucket-name>/<object-key>`<br/>
 > Virtual Hosted Style：SDK将访问`<bucket-name>.s3.example.com/<object-key>`
 
 ### Endpoint
