@@ -42,6 +42,8 @@
 一般留空即可。
 
 > 若确认过其他配置正确又不能访问，请在服务商的文档中查看并填写英文的 Region，例如 `cn-east-1`。
+> 
+> Cloudflare 需要填写均为小写字母的 `auto`。
 
 ## 部分对象存储服务商兼容性
 
@@ -55,10 +57,11 @@
 |金山云|https://docs.ksyun.com/documents/6761|Virtual Hosted Style|✅|
 |青云|https://docsv3.qingcloud.com/storage/object-storage/s3/intro/|Virtual Hosted Style / <br>Path Style|✅|
 |网易数帆|[https://sf.163.com/help/documents/89796157866430464](https://sf.163.com/help/documents/89796157866430464)|Virtual Hosted Style|✅|
+|Cloudflare|Cloudflare S3 兼容性API<br>[https://developers.cloudflare.com/r2/data-access/s3-api/](https://developers.cloudflare.com/r2/data-access/s3-api/)|Virtual Hosted Style / <br>Path Style|✅|
 |自建minio|\-|Path Style|✅|
 |华为云|文档未说明是否兼容，工单反馈不保证兼容性，实际测试可以使用|Virtual Hosted Style|❓|
-|Ucloud|只支持 8MB 大小的分片，本插件暂不支持<br>[https://docs.ucloud.cn/ufile/s3/s3\_introduction](https://docs.ucloud.cn/ufile/s3/s3_introduction)|\-|❎|
-|又拍云|暂不支持 s3 协议|\-|❎|
+|Ucloud|只支持 8MB 大小的分片，本插件暂不支持<br>[https://docs.ucloud.cn/ufile/s3/s3\_introduction](https://docs.ucloud.cn/ufile/s3/s3_introduction)|\-|❌|
+|又拍云|暂不支持 s3 协议|\-|❌|
 
 ## 开发环境
 
