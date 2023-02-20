@@ -133,72 +133,78 @@ public class S3OsAttachmentHandler implements AttachmentHandler {
     }
 
     Mono<ObjectDetail> upload(UploadContext uploadContext, S3OsProperties properties) {
-        var uploadState = new UploadState(properties, uploadContext.file().filename());
-        var s3client = buildS3AsyncClient(properties);
-        return checkFileExistsAndRename(uploadState, s3client)
-                // init multipart upload
-                .flatMap(state -> Mono.fromFuture(s3client.createMultipartUpload(
-                        CreateMultipartUploadRequest.builder()
-                                .bucket(properties.getBucket())
-                                .contentType(state.contentType)
-                                .key(state.objectKey)
-                                .build())))
-                .flatMapMany((response) -> {
-                    checkResult(response, "createMultipartUpload");
-                    uploadState.uploadId = response.uploadId();
-                    return uploadContext.file().content();
-                })
-                // buffer to part
-                .windowUntil((buffer) -> {
-                    uploadState.buffered += buffer.readableByteCount();
-                    if (uploadState.buffered >= MULTIPART_MIN_PART_SIZE) {
-                        uploadState.buffered = 0;
-                        return true;
-                    } else {
-                        return false;
-                    }
-                })
-                // upload part
-                .concatMap((window) -> window.collectList().flatMap((bufferList) -> {
-                    var buffer = S3OsAttachmentHandler.concatBuffers(bufferList);
-                    return uploadPart(uploadState, buffer, s3client);
-                }))
-                .reduce(uploadState, (state, completedPart) -> {
-                    state.completedParts.put(completedPart.partNumber(), completedPart);
-                    return state;
-                })
-                // complete multipart upload
-                .flatMap((state) -> Mono
-                        .fromFuture(s3client.completeMultipartUpload(CompleteMultipartUploadRequest.builder()
-                                .bucket(properties.getBucket())
-                                .uploadId(state.uploadId)
-                                .multipartUpload(CompletedMultipartUpload.builder()
-                                        .parts(state.completedParts.values())
-                                        .build())
-                                .key(state.objectKey)
-                                .build())
-                        ))
-                // get object metadata
-                .flatMap((response) -> {
-                    checkResult(response, "completeUpload");
-                    return Mono.fromFuture(s3client.headObject(
-                            HeadObjectRequest.builder()
-                                    .bucket(properties.getBucket())
-                                    .key(uploadState.objectKey)
-                                    .build()
-                    ));
-                })
-                // build object detail
-                .map((response) -> {
-                    checkResult(response, "getMetadata");
-                    return new ObjectDetail(uploadState, response);
-                })
-                // close client
-                .doFinally((signalType) -> {
-                    if (uploadState.needRemoveMapKey) {
-                        uploadingFile.remove(uploadState.getUploadingMapKey());
-                    }
-                    s3client.close();
+        return Mono.zip(Mono.just(new UploadState(properties, uploadContext.file().filename())),
+                        Mono.just(buildS3AsyncClient(properties)))
+                .flatMap(tuple -> {
+                    var uploadState = tuple.getT1();
+                    var s3client = tuple.getT2();
+                    return checkFileExistsAndRename(uploadState, s3client)
+                            // init multipart upload
+                            .flatMap(state -> Mono.fromFuture(s3client.createMultipartUpload(
+                                    CreateMultipartUploadRequest.builder()
+                                            .bucket(properties.getBucket())
+                                            .contentType(state.contentType)
+                                            .key(state.objectKey)
+                                            .build())))
+                            .flatMapMany((response) -> {
+                                checkResult(response, "createMultipartUpload");
+                                uploadState.uploadId = response.uploadId();
+                                return uploadContext.file().content();
+                            })
+                            // buffer to part
+                            .windowUntil((buffer) -> {
+                                uploadState.buffered += buffer.readableByteCount();
+                                if (uploadState.buffered >= MULTIPART_MIN_PART_SIZE) {
+                                    uploadState.buffered = 0;
+                                    return true;
+                                } else {
+                                    return false;
+                                }
+                            })
+                            // upload part
+                            .concatMap((window) -> window.collectList().flatMap((bufferList) -> {
+                                var buffer = S3OsAttachmentHandler.concatBuffers(bufferList);
+                                return uploadPart(uploadState, buffer, s3client);
+                            }))
+                            .reduce(uploadState, (state, completedPart) -> {
+                                state.completedParts.put(completedPart.partNumber(), completedPart);
+                                return state;
+                            })
+                            // complete multipart upload
+                            .flatMap((state) -> Mono
+                                    .fromFuture(s3client.completeMultipartUpload(
+                                            CompleteMultipartUploadRequest
+                                                    .builder()
+                                                    .bucket(properties.getBucket())
+                                                    .uploadId(state.uploadId)
+                                                    .multipartUpload(CompletedMultipartUpload.builder()
+                                                            .parts(state.completedParts.values())
+                                                            .build())
+                                                    .key(state.objectKey)
+                                                    .build())
+                                    ))
+                            // get object metadata
+                            .flatMap((response) -> {
+                                checkResult(response, "completeUpload");
+                                return Mono.fromFuture(s3client.headObject(
+                                        HeadObjectRequest.builder()
+                                                .bucket(properties.getBucket())
+                                                .key(uploadState.objectKey)
+                                                .build()
+                                ));
+                            })
+                            // build object detail
+                            .map((response) -> {
+                                checkResult(response, "getMetadata");
+                                return new ObjectDetail(uploadState, response);
+                            })
+                            // close client
+                            .doFinally((signalType) -> {
+                                if (uploadState.needRemoveMapKey) {
+                                    uploadingFile.remove(uploadState.getUploadingMapKey());
+                                }
+                                s3client.close();
+                            });
                 });
     }
 
