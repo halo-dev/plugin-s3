@@ -93,16 +93,16 @@ public class S3OsAttachmentHandler implements AttachmentHandler {
         String externalLink;
         if (StringUtils.isBlank(properties.getDomain())) {
             var host = properties.getBucket() + "." + properties.getEndpoint();
-            externalLink = properties.getProtocol() + "://" + host + "/" + objectDetail.uploadState.getObjectKey();
+            externalLink = properties.getProtocol() + "://" + host + "/" + objectDetail.uploadState.objectKey;
         } else {
             externalLink = properties.getProtocol() + "://" + properties.getDomain() + "/"
-                    + objectDetail.uploadState.getObjectKey();
+                    + objectDetail.uploadState.objectKey;
         }
 
         var metadata = new Metadata();
         metadata.setName(UUID.randomUUID().toString());
         metadata.setAnnotations(
-                Map.of(OBJECT_KEY, objectDetail.uploadState.getObjectKey(), Constant.EXTERNAL_LINK_ANNO_KEY,
+                Map.of(OBJECT_KEY, objectDetail.uploadState.objectKey, Constant.EXTERNAL_LINK_ANNO_KEY,
                         UriUtils.encodePath(externalLink, StandardCharsets.UTF_8)));
 
         var objectMetadata = objectDetail.objectMetadata();
@@ -114,7 +114,7 @@ public class S3OsAttachmentHandler implements AttachmentHandler {
         var attachment = new Attachment();
         attachment.setMetadata(metadata);
         attachment.setSpec(spec);
-        log.info("Upload object {} to bucket {} successfully", objectDetail.uploadState.getObjectKey(),
+        log.info("Upload object {} to bucket {} successfully", objectDetail.uploadState.objectKey,
                 properties.getBucket());
         return attachment;
     }
@@ -141,7 +141,7 @@ public class S3OsAttachmentHandler implements AttachmentHandler {
                         CreateMultipartUploadRequest.builder()
                                 .bucket(properties.getBucket())
                                 .contentType(state.contentType)
-                                .key(state.getObjectKey())
+                                .key(state.objectKey)
                                 .build())))
                 .flatMapMany((response) -> {
                     checkResult(response, "createMultipartUpload");
@@ -175,7 +175,7 @@ public class S3OsAttachmentHandler implements AttachmentHandler {
                                 .multipartUpload(CompletedMultipartUpload.builder()
                                         .parts(state.completedParts.values())
                                         .build())
-                                .key(state.getObjectKey())
+                                .key(state.objectKey)
                                 .build())
                         ))
                 // get object metadata
@@ -184,7 +184,7 @@ public class S3OsAttachmentHandler implements AttachmentHandler {
                     return Mono.fromFuture(s3client.headObject(
                             HeadObjectRequest.builder()
                                     .bucket(properties.getBucket())
-                                    .key(uploadState.getObjectKey())
+                                    .key(uploadState.objectKey)
                                     .build()
                     ));
                 })
@@ -206,7 +206,7 @@ public class S3OsAttachmentHandler implements AttachmentHandler {
         return Mono.defer(() -> {
                     // deduplication of uploading files
                     if (uploadingFile.put(uploadState.getUploadingMapKey(), uploadState.getUploadingMapKey()) != null) {
-                        return Mono.error(new FileAlreadyExistsException("文件 " + uploadState.getObjectKey()
+                        return Mono.error(new FileAlreadyExistsException("文件 " + uploadState.objectKey
                                 + " 已存在，建议更名后重试。[local]"));
                     }
                     uploadState.needRemoveMapKey = true;
@@ -214,7 +214,7 @@ public class S3OsAttachmentHandler implements AttachmentHandler {
                     return Mono
                             .fromFuture(s3client.headObject(HeadObjectRequest.builder()
                                     .bucket(uploadState.properties.getBucket())
-                                    .key(uploadState.getObjectKey())
+                                    .key(uploadState.objectKey)
                                     .build()))
                             .onErrorResume(NoSuchKeyException.class, e -> {
                                 var builder = HeadObjectResponse.builder();
@@ -224,7 +224,7 @@ public class S3OsAttachmentHandler implements AttachmentHandler {
                             .flatMap(response -> {
                                 if (response != null && response.sdkHttpResponse() != null
                                         && response.sdkHttpResponse().isSuccessful()) {
-                                    return Mono.error(new FileAlreadyExistsException("文件 " + uploadState.getObjectKey()
+                                    return Mono.error(new FileAlreadyExistsException("文件 " + uploadState.objectKey
                                             + " 已存在，建议更名后重试。[remote]"));
                                 } else {
                                     return Mono.just(uploadState);
@@ -251,7 +251,7 @@ public class S3OsAttachmentHandler implements AttachmentHandler {
         return Mono
                 .fromFuture(s3client.uploadPart(UploadPartRequest.builder()
                                 .bucket(uploadState.properties.getBucket())
-                                .key(uploadState.getObjectKey())
+                                .key(uploadState.objectKey)
                                 .partNumber(partNumber)
                                 .uploadId(uploadState.uploadId)
                                 .contentLength((long) buffer.capacity())
@@ -311,26 +311,25 @@ public class S3OsAttachmentHandler implements AttachmentHandler {
         int buffered = 0;
         String contentType;
         String fileName;
+        String objectKey;
         boolean needRemoveMapKey = false;
 
         public UploadState(S3OsProperties properties, String fileName) {
             this.properties = properties;
             this.originalFileName = fileName;
             this.fileName = fileName;
+            this.objectKey = properties.getObjectName(fileName);
             this.contentType = MediaTypeFactory.getMediaType(fileName)
                     .orElse(MediaType.APPLICATION_OCTET_STREAM).toString();
         }
 
         public String getUploadingMapKey() {
-            return properties.getBucket() + "/" + getObjectKey();
-        }
-
-        public String getObjectKey() {
-            return properties.getObjectName(fileName);
+            return properties.getBucket() + "/" + objectKey;
         }
 
         public void randomFileName() {
             this.fileName = FileNameUtils.randomFileName(originalFileName, 4);
+            this.objectKey = properties.getObjectName(fileName);
         }
     }
 
