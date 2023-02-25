@@ -50,8 +50,9 @@ public class S3OsAttachmentHandler implements AttachmentHandler {
 
     static ExecutorService closeClientExecutorService = new ThreadPoolExecutor(0,
             Runtime.getRuntime().availableProcessors(), 1L, TimeUnit.SECONDS,
-            new LinkedBlockingQueue<>(64),
-            new ThreadFactoryBuilder().setNameFormat("close-s3client-t-%d").build());
+            new LinkedBlockingQueue<>(256),
+            new ThreadFactoryBuilder().setNameFormat("close-s3client-t-%d").build(),
+            new ThreadPoolExecutor.CallerRunsPolicy());
 
     @Override
     public Mono<Attachment> upload(UploadContext uploadContext) {
