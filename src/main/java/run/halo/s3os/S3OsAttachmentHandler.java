@@ -1,5 +1,6 @@
 package run.halo.s3os;
 
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.pf4j.Extension;
@@ -37,7 +38,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.*;
 
 @Slf4j
 @Extension
@@ -46,6 +47,11 @@ public class S3OsAttachmentHandler implements AttachmentHandler {
     private static final String OBJECT_KEY = "s3os.plugin.halo.run/object-key";
     private static final int MULTIPART_MIN_PART_SIZE = 5 * 1024 * 1024;
     private final Map<String, Object> uploadingFile = new ConcurrentHashMap<>();
+
+    static ExecutorService closeClientExecutorService = new ThreadPoolExecutor(0,
+            Runtime.getRuntime().availableProcessors(), 1L, TimeUnit.SECONDS,
+            new LinkedBlockingQueue<>(64),
+            new ThreadFactoryBuilder().setNameFormat("close-s3client-t-%d").build());
 
     @Override
     public Mono<Attachment> upload(UploadContext uploadContext) {
@@ -72,7 +78,8 @@ public class S3OsAttachmentHandler implements AttachmentHandler {
                                     .bucket(properties.getBucket())
                                     .key(objectName)
                                     .build()))
-                            .doFinally(signalType -> client.close())
+                            .doFinally(signalType ->
+                                    CompletableFuture.runAsync(client::close, closeClientExecutorService))
                             .map(response -> {
                                 checkResult(response, "delete object");
                                 log.info("Delete object {} from bucket {} successfully",
@@ -203,7 +210,7 @@ public class S3OsAttachmentHandler implements AttachmentHandler {
                                 if (uploadState.needRemoveMapKey) {
                                     uploadingFile.remove(uploadState.getUploadingMapKey());
                                 }
-                                s3client.close();
+                                CompletableFuture.runAsync(s3client::close, closeClientExecutorService);
                             });
                 });
     }
