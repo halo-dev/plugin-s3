@@ -1,5 +1,14 @@
 package run.halo.s3os;
 
+import java.net.URI;
+import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.FileAlreadyExistsException;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.pf4j.Extension;
@@ -11,6 +20,7 @@ import org.springframework.web.server.ServerWebInputException;
 import org.springframework.web.util.UriUtils;
 import reactor.core.Exceptions;
 import reactor.core.publisher.Mono;
+import reactor.core.scheduler.Schedulers;
 import reactor.util.retry.Retry;
 import run.halo.app.core.extension.attachment.Attachment;
 import run.halo.app.core.extension.attachment.Attachment.AttachmentSpec;
@@ -22,22 +32,21 @@ import run.halo.app.extension.Metadata;
 import run.halo.app.infra.utils.JsonUtils;
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
 import software.amazon.awssdk.core.SdkResponse;
-import software.amazon.awssdk.core.async.AsyncRequestBody;
+import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.http.SdkHttpResponse;
 import software.amazon.awssdk.regions.Region;
-import software.amazon.awssdk.services.s3.S3AsyncClient;
+import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.S3Configuration;
-import software.amazon.awssdk.services.s3.model.*;
-
-import java.net.URI;
-import java.nio.ByteBuffer;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.FileAlreadyExistsException;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
+import software.amazon.awssdk.services.s3.model.CompleteMultipartUploadRequest;
+import software.amazon.awssdk.services.s3.model.CompletedMultipartUpload;
+import software.amazon.awssdk.services.s3.model.CompletedPart;
+import software.amazon.awssdk.services.s3.model.CreateMultipartUploadRequest;
+import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
+import software.amazon.awssdk.services.s3.model.HeadObjectRequest;
+import software.amazon.awssdk.services.s3.model.HeadObjectResponse;
+import software.amazon.awssdk.services.s3.model.NoSuchKeyException;
+import software.amazon.awssdk.services.s3.model.UploadPartRequest;
+import software.amazon.awssdk.utils.SdkAutoCloseable;
 
 @Slf4j
 @Extension
@@ -50,38 +59,39 @@ public class S3OsAttachmentHandler implements AttachmentHandler {
     @Override
     public Mono<Attachment> upload(UploadContext uploadContext) {
         return Mono.just(uploadContext).filter(context -> this.shouldHandle(context.policy()))
-                .flatMap(context -> {
-                    final var properties = getProperties(context.configMap());
-                    return upload(context, properties)
-                            .map(objectDetail -> this.buildAttachment(properties, objectDetail));
-                });
+            .flatMap(context -> {
+                final var properties = getProperties(context.configMap());
+                return upload(context, properties)
+                    .subscribeOn(Schedulers.boundedElastic())
+                    .map(objectDetail -> this.buildAttachment(properties, objectDetail));
+            });
     }
 
     @Override
     public Mono<Attachment> delete(DeleteContext deleteContext) {
         return Mono.just(deleteContext).filter(context -> this.shouldHandle(context.policy()))
-                .flatMap(context -> {
-                    var annotations = context.attachment().getMetadata().getAnnotations();
-                    if (annotations == null || !annotations.containsKey(OBJECT_KEY)) {
-                        return Mono.just(context);
-                    }
-                    var objectName = annotations.get(OBJECT_KEY);
-                    var properties = getProperties(deleteContext.configMap());
-                    var client = buildS3AsyncClient(properties);
-                    return Mono.fromFuture(client.deleteObject(DeleteObjectRequest.builder()
-                                    .bucket(properties.getBucket())
-                                    .key(objectName)
-                                    .build()))
-                            .doFinally(signalType -> client.close())
-                            .map(response -> {
-                                checkResult(response, "delete object");
-                                log.info("Delete object {} from bucket {} successfully",
-                                        objectName, properties.getBucket());
-                                return context;
-                            });
-
-                })
-                .map(DeleteContext::attachment);
+            .flatMap(context -> {
+                var annotations = context.attachment().getMetadata().getAnnotations();
+                if (annotations == null || !annotations.containsKey(OBJECT_KEY)) {
+                    return Mono.just(context);
+                }
+                var objectName = annotations.get(OBJECT_KEY);
+                var properties = getProperties(deleteContext.configMap());
+                return Mono.using(() -> buildS3Client(properties),
+                        client -> Mono.fromCallable(
+                            () -> client.deleteObject(DeleteObjectRequest.builder()
+                                .bucket(properties.getBucket())
+                                .key(objectName)
+                                .build())).subscribeOn(Schedulers.boundedElastic()),
+                        S3Client::close)
+                    .doOnNext(response -> {
+                        checkResult(response, "delete object");
+                        log.info("Delete object {} from bucket {} successfully",
+                            objectName, properties.getBucket());
+                    })
+                    .thenReturn(context);
+            })
+            .map(DeleteContext::attachment);
     }
 
     S3OsProperties getProperties(ConfigMap configMap) {
@@ -93,17 +103,18 @@ public class S3OsAttachmentHandler implements AttachmentHandler {
         String externalLink;
         if (StringUtils.isBlank(properties.getDomain())) {
             var host = properties.getBucket() + "." + properties.getEndpoint();
-            externalLink = properties.getProtocol() + "://" + host + "/" + objectDetail.uploadState.objectKey;
+            externalLink =
+                properties.getProtocol() + "://" + host + "/" + objectDetail.uploadState.objectKey;
         } else {
             externalLink = properties.getProtocol() + "://" + properties.getDomain() + "/"
-                    + objectDetail.uploadState.objectKey;
+                           + objectDetail.uploadState.objectKey;
         }
 
         var metadata = new Metadata();
         metadata.setName(UUID.randomUUID().toString());
         metadata.setAnnotations(
-                Map.of(OBJECT_KEY, objectDetail.uploadState.objectKey, Constant.EXTERNAL_LINK_ANNO_KEY,
-                        UriUtils.encodePath(externalLink, StandardCharsets.UTF_8)));
+            Map.of(OBJECT_KEY, objectDetail.uploadState.objectKey, Constant.EXTERNAL_LINK_ANNO_KEY,
+                UriUtils.encodePath(externalLink, StandardCharsets.UTF_8)));
 
         var objectMetadata = objectDetail.objectMetadata();
         var spec = new AttachmentSpec();
@@ -115,161 +126,162 @@ public class S3OsAttachmentHandler implements AttachmentHandler {
         attachment.setMetadata(metadata);
         attachment.setSpec(spec);
         log.info("Upload object {} to bucket {} successfully", objectDetail.uploadState.objectKey,
-                properties.getBucket());
+            properties.getBucket());
         return attachment;
     }
 
-    S3AsyncClient buildS3AsyncClient(S3OsProperties properties) {
-        return S3AsyncClient.builder()
-                .region(Region.of(properties.getRegion()))
-                .endpointOverride(URI.create(properties.getEndpointProtocol() + "://" + properties.getEndpoint()))
-                .credentialsProvider(() -> AwsBasicCredentials.create(properties.getAccessKey(),
-                        properties.getAccessSecret()))
-                .serviceConfiguration(S3Configuration.builder()
-                        .chunkedEncodingEnabled(false)
-                        .pathStyleAccessEnabled(properties.getEnablePathStyleAccess())
-                        .build())
-                .build();
+    S3Client buildS3Client(S3OsProperties properties) {
+        return S3Client.builder()
+            .region(Region.of(properties.getRegion()))
+            .endpointOverride(
+                URI.create(properties.getEndpointProtocol() + "://" + properties.getEndpoint()))
+            .credentialsProvider(() -> AwsBasicCredentials.create(properties.getAccessKey(),
+                properties.getAccessSecret()))
+            .serviceConfiguration(S3Configuration.builder()
+                .chunkedEncodingEnabled(false)
+                .pathStyleAccessEnabled(properties.getEnablePathStyleAccess())
+                .build())
+            .build();
     }
 
     Mono<ObjectDetail> upload(UploadContext uploadContext, S3OsProperties properties) {
-        return Mono.zip(Mono.just(new UploadState(properties, uploadContext.file().filename())),
-                        Mono.just(buildS3AsyncClient(properties)))
-                .flatMap(tuple -> {
-                    var uploadState = tuple.getT1();
-                    var s3client = tuple.getT2();
-                    return checkFileExistsAndRename(uploadState, s3client)
-                            // init multipart upload
-                            .flatMap(state -> Mono.fromFuture(s3client.createMultipartUpload(
-                                    CreateMultipartUploadRequest.builder()
-                                            .bucket(properties.getBucket())
-                                            .contentType(state.contentType)
-                                            .key(state.objectKey)
-                                            .build())))
-                            .flatMapMany((response) -> {
-                                checkResult(response, "createMultipartUpload");
-                                uploadState.uploadId = response.uploadId();
-                                return uploadContext.file().content();
-                            })
-                            // buffer to part
-                            .windowUntil((buffer) -> {
-                                uploadState.buffered += buffer.readableByteCount();
-                                if (uploadState.buffered >= MULTIPART_MIN_PART_SIZE) {
-                                    uploadState.buffered = 0;
-                                    return true;
-                                } else {
-                                    return false;
-                                }
-                            })
-                            // upload part
-                            .concatMap((window) -> window.collectList().flatMap((bufferList) -> {
-                                var buffer = S3OsAttachmentHandler.concatBuffers(bufferList);
-                                return uploadPart(uploadState, buffer, s3client);
-                            }))
-                            .reduce(uploadState, (state, completedPart) -> {
-                                state.completedParts.put(completedPart.partNumber(), completedPart);
-                                return state;
-                            })
-                            // complete multipart upload
-                            .flatMap((state) -> Mono
-                                    .fromFuture(s3client.completeMultipartUpload(
-                                            CompleteMultipartUploadRequest
-                                                    .builder()
-                                                    .bucket(properties.getBucket())
-                                                    .uploadId(state.uploadId)
-                                                    .multipartUpload(CompletedMultipartUpload.builder()
-                                                            .parts(state.completedParts.values())
-                                                            .build())
-                                                    .key(state.objectKey)
-                                                    .build())
-                                    ))
-                            // get object metadata
-                            .flatMap((response) -> {
-                                checkResult(response, "completeUpload");
-                                return Mono.fromFuture(s3client.headObject(
-                                        HeadObjectRequest.builder()
-                                                .bucket(properties.getBucket())
-                                                .key(uploadState.objectKey)
-                                                .build()
-                                ));
-                            })
-                            // build object detail
-                            .map((response) -> {
-                                checkResult(response, "getMetadata");
-                                return new ObjectDetail(uploadState, response);
-                            })
-                            // close client
-                            .doFinally((signalType) -> {
-                                if (uploadState.needRemoveMapKey) {
-                                    uploadingFile.remove(uploadState.getUploadingMapKey());
-                                }
-                                s3client.close();
-                            });
-                });
-    }
-
-    private Mono<UploadState> checkFileExistsAndRename(UploadState uploadState, S3AsyncClient s3client) {
-        return Mono.defer(() -> {
-                    // deduplication of uploading files
-                    if (uploadingFile.put(uploadState.getUploadingMapKey(), uploadState.getUploadingMapKey()) != null) {
-                        return Mono.error(new FileAlreadyExistsException("文件 " + uploadState.objectKey
-                                + " 已存在，建议更名后重试。[local]"));
-                    }
-                    uploadState.needRemoveMapKey = true;
-                    // check whether file exists
-                    return Mono
-                            .fromFuture(s3client.headObject(HeadObjectRequest.builder()
-                                    .bucket(uploadState.properties.getBucket())
-                                    .key(uploadState.objectKey)
-                                    .build()))
-                            .onErrorResume(NoSuchKeyException.class, e -> {
-                                var builder = HeadObjectResponse.builder();
-                                builder.sdkHttpResponse(SdkHttpResponse.builder().statusCode(404).build());
-                                return Mono.just(builder.build());
-                            })
-                            .flatMap(response -> {
-                                if (response != null && response.sdkHttpResponse() != null
-                                        && response.sdkHttpResponse().isSuccessful()) {
-                                    return Mono.error(new FileAlreadyExistsException("文件 " + uploadState.objectKey
-                                            + " 已存在，建议更名后重试。[remote]"));
-                                } else {
-                                    return Mono.just(uploadState);
-                                }
-                            });
-                })
-                .retryWhen(Retry.max(3)
-                        .filter(FileAlreadyExistsException.class::isInstance)
-                        .doAfterRetry((retrySignal) -> {
-                            if (uploadState.needRemoveMapKey) {
-                                uploadingFile.remove(uploadState.getUploadingMapKey());
-                                uploadState.needRemoveMapKey = false;
-                            }
-                            uploadState.randomFileName();
-                        })
-                )
-                .onErrorMap(Exceptions::isRetryExhausted,
-                        throwable -> new ServerWebInputException(throwable.getCause().getMessage()));
-    }
-
-
-    private Mono<CompletedPart> uploadPart(UploadState uploadState, ByteBuffer buffer, S3AsyncClient s3client) {
-        final int partNumber = ++uploadState.partCounter;
-        return Mono
-                .fromFuture(s3client.uploadPart(UploadPartRequest.builder()
-                                .bucket(uploadState.properties.getBucket())
+        return Mono.using(() -> buildS3Client(properties),
+            client -> {
+                var uploadState = new UploadState(properties, uploadContext.file().filename());
+                return checkFileExistsAndRename(uploadState, client)
+                    // init multipart upload
+                    .flatMap(state -> Mono.fromCallable(() -> client.createMultipartUpload(
+                        CreateMultipartUploadRequest.builder()
+                            .bucket(properties.getBucket())
+                            .contentType(state.contentType)
+                            .key(state.objectKey)
+                            .build())).subscribeOn(Schedulers.boundedElastic()))
+                    .flatMapMany((response) -> {
+                        checkResult(response, "createMultipartUpload");
+                        uploadState.uploadId = response.uploadId();
+                        return uploadContext.file().content();
+                    })
+                    // buffer to part
+                    .windowUntil((buffer) -> {
+                        uploadState.buffered += buffer.readableByteCount();
+                        if (uploadState.buffered >= MULTIPART_MIN_PART_SIZE) {
+                            uploadState.buffered = 0;
+                            return true;
+                        } else {
+                            return false;
+                        }
+                    })
+                    // upload part
+                    .concatMap((window) -> window.collectList().flatMap((bufferList) -> {
+                        var buffer = S3OsAttachmentHandler.concatBuffers(bufferList);
+                        return uploadPart(uploadState, buffer, client);
+                    }))
+                    .reduce(uploadState, (state, completedPart) -> {
+                        state.completedParts.put(completedPart.partNumber(), completedPart);
+                        return state;
+                    })
+                    // complete multipart upload
+                    .flatMap((state) -> Mono.just(client.completeMultipartUpload(
+                        CompleteMultipartUploadRequest
+                            .builder()
+                            .bucket(properties.getBucket())
+                            .uploadId(state.uploadId)
+                            .multipartUpload(CompletedMultipartUpload.builder()
+                                .parts(state.completedParts.values())
+                                .build())
+                            .key(state.objectKey)
+                            .build())
+                    ))
+                    // get object metadata
+                    .flatMap((response) -> {
+                        checkResult(response, "completeUpload");
+                        return Mono.just(client.headObject(
+                            HeadObjectRequest.builder()
+                                .bucket(properties.getBucket())
                                 .key(uploadState.objectKey)
-                                .partNumber(partNumber)
-                                .uploadId(uploadState.uploadId)
-                                .contentLength((long) buffer.capacity())
-                                .build(),
-                        AsyncRequestBody.fromPublisher(Mono.just(buffer))))
-                .map((uploadPartResult) -> {
-                    checkResult(uploadPartResult, "uploadPart");
-                    return CompletedPart.builder()
-                            .eTag(uploadPartResult.eTag())
-                            .partNumber(partNumber)
-                            .build();
-                });
+                                .build()
+                        ));
+                    })
+                    // build object detail
+                    .map((response) -> {
+                        checkResult(response, "getMetadata");
+                        return new ObjectDetail(uploadState, response);
+                    })
+                    // close client
+                    .doFinally((signalType) -> {
+                        if (uploadState.needRemoveMapKey) {
+                            uploadingFile.remove(uploadState.getUploadingMapKey());
+                        }
+                    });
+            },
+            SdkAutoCloseable::close);
+    }
+
+    private Mono<UploadState> checkFileExistsAndRename(UploadState uploadState,
+        S3Client s3client) {
+        return Mono.defer(() -> {
+                // deduplication of uploading files
+                if (uploadingFile.put(uploadState.getUploadingMapKey(),
+                    uploadState.getUploadingMapKey()) != null) {
+                    return Mono.error(new FileAlreadyExistsException("文件 " + uploadState.objectKey
+                                                                     +
+                                                                     " 已存在，建议更名后重试。[local]"));
+                }
+                uploadState.needRemoveMapKey = true;
+                // check whether file exists
+                return Mono.fromSupplier(() -> s3client.headObject(HeadObjectRequest.builder()
+                        .bucket(uploadState.properties.getBucket())
+                        .key(uploadState.objectKey)
+                        .build()))
+                    .onErrorResume(NoSuchKeyException.class, e -> {
+                        var builder = HeadObjectResponse.builder();
+                        builder.sdkHttpResponse(SdkHttpResponse.builder().statusCode(404).build());
+                        return Mono.just(builder.build());
+                    })
+                    .flatMap(response -> {
+                        if (response != null && response.sdkHttpResponse() != null
+                            && response.sdkHttpResponse().isSuccessful()) {
+                            return Mono.error(
+                                new FileAlreadyExistsException("文件 " + uploadState.objectKey
+                                                               + " 已存在，建议更名后重试。[remote]"));
+                        } else {
+                            return Mono.just(uploadState);
+                        }
+                    });
+            })
+            .retryWhen(Retry.max(3)
+                .filter(FileAlreadyExistsException.class::isInstance)
+                .doAfterRetry((retrySignal) -> {
+                    if (uploadState.needRemoveMapKey) {
+                        uploadingFile.remove(uploadState.getUploadingMapKey());
+                        uploadState.needRemoveMapKey = false;
+                    }
+                    uploadState.randomFileName();
+                })
+            )
+            .onErrorMap(Exceptions::isRetryExhausted,
+                throwable -> new ServerWebInputException(throwable.getCause().getMessage()));
+    }
+
+
+    private Mono<CompletedPart> uploadPart(UploadState uploadState, ByteBuffer buffer,
+        S3Client s3client) {
+        final int partNumber = ++uploadState.partCounter;
+        return Mono.just(s3client.uploadPart(UploadPartRequest.builder()
+                    .bucket(uploadState.properties.getBucket())
+                    .key(uploadState.objectKey)
+                    .partNumber(partNumber)
+                    .uploadId(uploadState.uploadId)
+                    .contentLength((long) buffer.capacity())
+                    .build(),
+                RequestBody.fromByteBuffer(buffer)))
+            .map((uploadPartResult) -> {
+                checkResult(uploadPartResult, "uploadPart");
+                return CompletedPart.builder()
+                    .eTag(uploadPartResult.eTag())
+                    .partNumber(partNumber)
+                    .build();
+            });
     }
 
     private static void checkResult(SdkResponse result, String operation) {
@@ -298,7 +310,7 @@ public class S3OsAttachmentHandler implements AttachmentHandler {
 
     boolean shouldHandle(Policy policy) {
         if (policy == null || policy.getSpec() == null ||
-                policy.getSpec().getTemplateName() == null) {
+            policy.getSpec().getTemplateName() == null) {
             return false;
         }
         String templateName = policy.getSpec().getTemplateName();
@@ -326,7 +338,7 @@ public class S3OsAttachmentHandler implements AttachmentHandler {
             this.fileName = fileName;
             this.objectKey = properties.getObjectName(fileName);
             this.contentType = MediaTypeFactory.getMediaType(fileName)
-                    .orElse(MediaType.APPLICATION_OCTET_STREAM).toString();
+                .orElse(MediaType.APPLICATION_OCTET_STREAM).toString();
         }
 
         public String getUploadingMapKey() {
