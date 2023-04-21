@@ -1,9 +1,11 @@
 package run.halo.s3os;
 
 import java.net.URI;
+import java.net.URISyntaxException;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.FileAlreadyExistsException;
+import java.time.Duration;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -15,6 +17,7 @@ import org.pf4j.Extension;
 import org.springframework.core.io.buffer.DataBuffer;
 import org.springframework.http.MediaType;
 import org.springframework.http.MediaTypeFactory;
+import org.springframework.lang.Nullable;
 import org.springframework.web.server.ServerErrorException;
 import org.springframework.web.server.ServerWebInputException;
 import org.springframework.web.util.UriUtils;
@@ -31,6 +34,7 @@ import run.halo.app.extension.ConfigMap;
 import run.halo.app.extension.Metadata;
 import run.halo.app.infra.utils.JsonUtils;
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
+import software.amazon.awssdk.awscore.presigner.SdkPresigner;
 import software.amazon.awssdk.core.SdkResponse;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.http.SdkHttpResponse;
@@ -42,10 +46,13 @@ import software.amazon.awssdk.services.s3.model.CompletedMultipartUpload;
 import software.amazon.awssdk.services.s3.model.CompletedPart;
 import software.amazon.awssdk.services.s3.model.CreateMultipartUploadRequest;
 import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
+import software.amazon.awssdk.services.s3.model.GetObjectRequest;
 import software.amazon.awssdk.services.s3.model.HeadObjectRequest;
 import software.amazon.awssdk.services.s3.model.HeadObjectResponse;
 import software.amazon.awssdk.services.s3.model.NoSuchKeyException;
 import software.amazon.awssdk.services.s3.model.UploadPartRequest;
+import software.amazon.awssdk.services.s3.presigner.S3Presigner;
+import software.amazon.awssdk.services.s3.presigner.model.GetObjectPresignRequest;
 import software.amazon.awssdk.utils.SdkAutoCloseable;
 
 @Slf4j
@@ -71,27 +78,86 @@ public class S3OsAttachmentHandler implements AttachmentHandler {
     public Mono<Attachment> delete(DeleteContext deleteContext) {
         return Mono.just(deleteContext).filter(context -> this.shouldHandle(context.policy()))
             .flatMap(context -> {
-                var annotations = context.attachment().getMetadata().getAnnotations();
-                if (annotations == null || !annotations.containsKey(OBJECT_KEY)) {
+                var objectKey = getObjectKey(context.attachment());
+                if (objectKey == null) {
                     return Mono.just(context);
                 }
-                var objectName = annotations.get(OBJECT_KEY);
                 var properties = getProperties(deleteContext.configMap());
                 return Mono.using(() -> buildS3Client(properties),
                         client -> Mono.fromCallable(
                             () -> client.deleteObject(DeleteObjectRequest.builder()
                                 .bucket(properties.getBucket())
-                                .key(objectName)
+                                .key(objectKey)
                                 .build())).subscribeOn(Schedulers.boundedElastic()),
                         S3Client::close)
                     .doOnNext(response -> {
                         checkResult(response, "delete object");
                         log.info("Delete object {} from bucket {} successfully",
-                            objectName, properties.getBucket());
+                            objectKey, properties.getBucket());
                     })
                     .thenReturn(context);
             })
             .map(DeleteContext::attachment);
+    }
+
+    @Override
+    public Mono<URI> getSharedURL(Attachment attachment, Policy policy, ConfigMap configMap,
+        Duration ttl) {
+        if (!this.shouldHandle(policy)) {
+            return Mono.empty();
+        }
+        var objectKey = getObjectKey(attachment);
+        if (objectKey == null) {
+            return Mono.error(new IllegalArgumentException(
+                "Cannot obtain object key from attachment " + attachment.getMetadata().getName()));
+        }
+        var properties = getProperties(configMap);
+
+        return Mono.using(() -> buildS3Presigner(properties),
+                s3Presigner -> {
+                    var getObjectRequest = GetObjectRequest.builder()
+                        .bucket(properties.getBucket())
+                        .key(objectKey)
+                        .build();
+                    var presignedRequest = GetObjectPresignRequest.builder()
+                        .signatureDuration(Duration.ofMinutes(5))
+                        .getObjectRequest(getObjectRequest)
+                        .build();
+                    var presignedGetObjectRequest = s3Presigner.presignGetObject(presignedRequest);
+                    var presignedURL = presignedGetObjectRequest.url();
+                    try {
+                        return Mono.just(presignedURL.toURI());
+                    } catch (URISyntaxException e) {
+                        return Mono.error(
+                            new RuntimeException("Failed to convert URL " + presignedURL + " to URI."));
+                    }
+                },
+                SdkPresigner::close)
+            .subscribeOn(Schedulers.boundedElastic());
+    }
+
+    @Override
+    public Mono<URI> getPermalink(Attachment attachment, Policy policy, ConfigMap configMap) {
+        if (!this.shouldHandle(policy)) {
+            return Mono.empty();
+        }
+        var objectKey = getObjectKey(attachment);
+        if (objectKey == null) {
+            return Mono.error(new IllegalArgumentException(
+                "Cannot obtain object key from attachment " + attachment.getMetadata().getName()));
+        }
+        var properties = getProperties(configMap);
+        var objectName = getObjectName(properties, objectKey);
+        return Mono.just(URI.create(objectName));
+    }
+
+    @Nullable
+    private String getObjectKey(Attachment attachment) {
+        var annotations = attachment.getMetadata().getAnnotations();
+        if (annotations == null) {
+            return null;
+        }
+        return annotations.get(OBJECT_KEY);
     }
 
     S3OsProperties getProperties(ConfigMap configMap) {
@@ -130,8 +196,31 @@ public class S3OsAttachmentHandler implements AttachmentHandler {
         return attachment;
     }
 
+    private String getObjectName(S3OsProperties properties, String objectKey) {
+        if (StringUtils.isBlank(properties.getDomain())) {
+            var host = properties.getBucket() + "." + properties.getEndpoint();
+            return properties.getProtocol() + "://" + host + "/" + objectKey;
+        } else {
+            return properties.getProtocol() + "://" + properties.getDomain() + "/" + objectKey;
+        }
+    }
+
     S3Client buildS3Client(S3OsProperties properties) {
         return S3Client.builder()
+            .region(Region.of(properties.getRegion()))
+            .endpointOverride(
+                URI.create(properties.getEndpointProtocol() + "://" + properties.getEndpoint()))
+            .credentialsProvider(() -> AwsBasicCredentials.create(properties.getAccessKey(),
+                properties.getAccessSecret()))
+            .serviceConfiguration(S3Configuration.builder()
+                .chunkedEncodingEnabled(false)
+                .pathStyleAccessEnabled(properties.getEnablePathStyleAccess())
+                .build())
+            .build();
+    }
+
+    private S3Presigner buildS3Presigner(S3OsProperties properties) {
+        return S3Presigner.builder()
             .region(Region.of(properties.getRegion()))
             .endpointOverride(
                 URI.create(properties.getEndpointProtocol() + "://" + properties.getEndpoint()))
