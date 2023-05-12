@@ -147,8 +147,8 @@ public class S3OsAttachmentHandler implements AttachmentHandler {
                 "Cannot obtain object key from attachment " + attachment.getMetadata().getName()));
         }
         var properties = getProperties(configMap);
-        var objectName = getObjectName(properties, objectKey);
-        return Mono.just(URI.create(objectName));
+        var objectURL = getObjectURL(properties, objectKey);
+        return Mono.just(URI.create(objectURL));
     }
 
     @Nullable
@@ -166,15 +166,7 @@ public class S3OsAttachmentHandler implements AttachmentHandler {
     }
 
     Attachment buildAttachment(S3OsProperties properties, ObjectDetail objectDetail) {
-        String externalLink;
-        if (StringUtils.isBlank(properties.getDomain())) {
-            var host = properties.getBucket() + "." + properties.getEndpoint();
-            externalLink =
-                properties.getProtocol() + "://" + host + "/" + objectDetail.uploadState.objectKey;
-        } else {
-            externalLink = properties.getProtocol() + "://" + properties.getDomain() + "/"
-                           + objectDetail.uploadState.objectKey;
-        }
+        String externalLink = getObjectURL(properties, objectDetail.uploadState.objectKey);
 
         var metadata = new Metadata();
         metadata.setName(UUID.randomUUID().toString());
@@ -196,9 +188,14 @@ public class S3OsAttachmentHandler implements AttachmentHandler {
         return attachment;
     }
 
-    private String getObjectName(S3OsProperties properties, String objectKey) {
+    private String getObjectURL(S3OsProperties properties, String objectKey) {
         if (StringUtils.isBlank(properties.getDomain())) {
-            var host = properties.getBucket() + "." + properties.getEndpoint();
+            String host;
+            if (properties.getEnablePathStyleAccess()) {
+                host = properties.getEndpoint() + "/" + properties.getBucket();
+            } else {
+                host = properties.getBucket() + "." + properties.getEndpoint();
+            }
             return properties.getProtocol() + "://" + host + "/" + objectKey;
         } else {
             return properties.getProtocol() + "://" + properties.getDomain() + "/" + objectKey;
