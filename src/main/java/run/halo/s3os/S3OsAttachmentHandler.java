@@ -171,8 +171,8 @@ public class S3OsAttachmentHandler implements AttachmentHandler {
         var metadata = new Metadata();
         metadata.setName(UUID.randomUUID().toString());
         metadata.setAnnotations(
-            Map.of(OBJECT_KEY, objectDetail.uploadState.objectKey, Constant.EXTERNAL_LINK_ANNO_KEY,
-                UriUtils.encodePath(externalLink, StandardCharsets.UTF_8)));
+            Map.of(OBJECT_KEY, objectDetail.uploadState.objectKey,
+                Constant.EXTERNAL_LINK_ANNO_KEY, externalLink));
 
         var objectMetadata = objectDetail.objectMetadata();
         var spec = new AttachmentSpec();
@@ -201,7 +201,7 @@ public class S3OsAttachmentHandler implements AttachmentHandler {
         } else {
             objectURL = properties.getProtocol() + "://" + properties.getDomain() + "/" + objectKey;
         }
-        return objectURL.replace(" ", "%20");
+        return UriUtils.encodePath(objectURL, StandardCharsets.UTF_8);
     }
 
     S3Client buildS3Client(S3OsProperties properties) {
