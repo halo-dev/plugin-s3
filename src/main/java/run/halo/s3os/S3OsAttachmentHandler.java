@@ -171,8 +171,8 @@ public class S3OsAttachmentHandler implements AttachmentHandler {
         var metadata = new Metadata();
         metadata.setName(UUID.randomUUID().toString());
         metadata.setAnnotations(new HashMap<>(
-            Map.of(OBJECT_KEY, objectDetail.uploadState.objectKey, Constant.EXTERNAL_LINK_ANNO_KEY,
-                UriUtils.encodePath(externalLink, StandardCharsets.UTF_8))));
+            Map.of(OBJECT_KEY, objectDetail.uploadState.objectKey,
+                Constant.EXTERNAL_LINK_ANNO_KEY, externalLink)));
 
         var objectMetadata = objectDetail.objectMetadata();
         var spec = new AttachmentSpec();
@@ -189,6 +189,7 @@ public class S3OsAttachmentHandler implements AttachmentHandler {
     }
 
     private String getObjectURL(S3OsProperties properties, String objectKey) {
+        String objectURL;
         if (StringUtils.isBlank(properties.getDomain())) {
             String host;
             if (properties.getEnablePathStyleAccess()) {
@@ -196,10 +197,11 @@ public class S3OsAttachmentHandler implements AttachmentHandler {
             } else {
                 host = properties.getBucket() + "." + properties.getEndpoint();
             }
-            return properties.getProtocol() + "://" + host + "/" + objectKey;
+            objectURL = properties.getProtocol() + "://" + host + "/" + objectKey;
         } else {
-            return properties.getProtocol() + "://" + properties.getDomain() + "/" + objectKey;
+            objectURL = properties.getProtocol() + "://" + properties.getDomain() + "/" + objectKey;
         }
+        return UriUtils.encodePath(objectURL, StandardCharsets.UTF_8);
     }
 
     S3Client buildS3Client(S3OsProperties properties) {
