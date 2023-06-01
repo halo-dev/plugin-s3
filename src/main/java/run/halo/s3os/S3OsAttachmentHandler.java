@@ -120,7 +120,7 @@ public class S3OsAttachmentHandler implements AttachmentHandler {
                         .key(objectKey)
                         .build();
                     var presignedRequest = GetObjectPresignRequest.builder()
-                        .signatureDuration(Duration.ofMinutes(5))
+                        .signatureDuration(ttl)
                         .getObjectRequest(getObjectRequest)
                         .build();
                     var presignedGetObjectRequest = s3Presigner.presignGetObject(presignedRequest);
@@ -170,9 +170,9 @@ public class S3OsAttachmentHandler implements AttachmentHandler {
 
         var metadata = new Metadata();
         metadata.setName(UUID.randomUUID().toString());
-        metadata.setAnnotations(
+        metadata.setAnnotations(new HashMap<>(
             Map.of(OBJECT_KEY, objectDetail.uploadState.objectKey,
-                Constant.EXTERNAL_LINK_ANNO_KEY, externalLink));
+                Constant.EXTERNAL_LINK_ANNO_KEY, externalLink)));
 
         var objectMetadata = objectDetail.objectMetadata();
         var spec = new AttachmentSpec();
