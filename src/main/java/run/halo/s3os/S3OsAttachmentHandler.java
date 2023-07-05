@@ -14,7 +14,10 @@ import java.util.concurrent.ConcurrentHashMap;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.pf4j.Extension;
+import org.reactivestreams.Publisher;
 import org.springframework.core.io.buffer.DataBuffer;
+import org.springframework.core.io.buffer.DataBufferUtils;
+import org.springframework.core.io.buffer.DefaultDataBufferFactory;
 import org.springframework.http.MediaType;
 import org.springframework.http.MediaTypeFactory;
 import org.springframework.lang.Nullable;
@@ -22,8 +25,10 @@ import org.springframework.web.server.ServerErrorException;
 import org.springframework.web.server.ServerWebInputException;
 import org.springframework.web.util.UriUtils;
 import reactor.core.Exceptions;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
+import reactor.util.context.Context;
 import reactor.util.retry.Retry;
 import run.halo.app.core.extension.attachment.Attachment;
 import run.halo.app.core.extension.attachment.Attachment.AttachmentSpec;
@@ -232,10 +237,52 @@ public class S3OsAttachmentHandler implements AttachmentHandler {
             .build();
     }
 
+    Flux<DataBuffer> reshape(Publisher<DataBuffer> content, int bufferSize) {
+        var dataBufferFactory = DefaultDataBufferFactory.sharedInstance;
+        return Flux.<ByteBuffer>create(sink -> {
+                var byteBuffer = ByteBuffer.allocate(bufferSize);
+                Flux.from(content)
+                    .doOnNext(dataBuffer -> {
+                        var count = dataBuffer.readableByteCount();
+                        for (var i = 0; i < count; i++) {
+                            byteBuffer.put(dataBuffer.read());
+                            // Emit the buffer when buffer
+                            if (!byteBuffer.hasRemaining()) {
+                                sink.next(deepCopy(byteBuffer));
+                                byteBuffer.clear();
+                            }
+                        }
+                    })
+                    .doOnComplete(() -> {
+                        // Emit the last part of buffer.
+                        if (byteBuffer.position() > 0) {
+                            sink.next(deepCopy(byteBuffer));
+                        }
+                    })
+                    .subscribe(DataBufferUtils::release, sink::error, sink::complete,
+                        Context.of(sink.contextView()));
+            })
+            .map(dataBufferFactory::wrap)
+            .cast(DataBuffer.class)
+            .doOnDiscard(DataBuffer.class, DataBufferUtils::release);
+    }
+
+    ByteBuffer deepCopy(ByteBuffer src) {
+        src.flip();
+        var dest = ByteBuffer.allocate(src.limit());
+        dest.put(src);
+        src.rewind();
+        dest.flip();
+        return dest;
+    }
+
     Mono<ObjectDetail> upload(UploadContext uploadContext, S3OsProperties properties) {
         return Mono.using(() -> buildS3Client(properties),
             client -> {
                 var uploadState = new UploadState(properties, uploadContext.file().filename());
+
+                var content = uploadContext.file().content();
+
                 return checkFileExistsAndRename(uploadState, client)
                     // init multipart upload
                     .flatMap(state -> Mono.fromCallable(() -> client.createMultipartUpload(
@@ -243,12 +290,12 @@ public class S3OsAttachmentHandler implements AttachmentHandler {
                             .bucket(properties.getBucket())
                             .contentType(state.contentType)
                             .key(state.objectKey)
-                            .build())).subscribeOn(Schedulers.boundedElastic()))
-                    .flatMapMany((response) -> {
+                            .build())))
+                    .doOnNext((response) -> {
                         checkResult(response, "createMultipartUpload");
                         uploadState.uploadId = response.uploadId();
-                        return uploadContext.file().content();
                     })
+                    .thenMany(reshape(content, MULTIPART_MIN_PART_SIZE))
                     // buffer to part
                     .windowUntil((buffer) -> {
                         uploadState.buffered += buffer.readableByteCount();
