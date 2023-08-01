@@ -148,8 +148,8 @@ public class S3OsAttachmentHandler implements AttachmentHandler {
         }
         var objectKey = getObjectKey(attachment);
         if (objectKey == null) {
-            return Mono.error(new IllegalArgumentException(
-                "Cannot obtain object key from attachment " + attachment.getMetadata().getName()));
+            // fallback to default handler for backward compatibility
+            return Mono.empty();
         }
         var properties = getProperties(configMap);
         var objectURL = getObjectURL(properties, objectKey);
