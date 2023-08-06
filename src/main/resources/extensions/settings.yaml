@@ -5,7 +5,7 @@ metadata:
 spec:
   forms: 
     - group: basic
-      label: 基本设置
+      label: 使用提示
       formSchema:
         - $formkit: text
           help: 请前往 “附件 - 存储策略” 添加策略
