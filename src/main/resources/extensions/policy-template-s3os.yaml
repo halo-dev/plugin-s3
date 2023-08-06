@@ -61,6 +61,16 @@ spec:
           label: 上传目录
           placeholder: 如不填写，则默认上传到根目录
         - $formkit: select
+          name: needRandomFilename
+          label: 上传时自动随机重命名文件
+          options:
+            - label: 是
+              value: true
+            - label: 否
+              value: false
+          validation: required
+          value: false
+        - $formkit: select
           name: protocol
           label: 绑定域名协议
           options:
