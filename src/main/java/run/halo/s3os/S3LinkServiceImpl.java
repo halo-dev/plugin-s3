@@ -1,0 +1,226 @@
+package run.halo.s3os;
+
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.StringUtils;
+import org.springframework.http.HttpStatus;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.ReactiveSecurityContextHolder;
+import org.springframework.security.core.context.SecurityContext;
+import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
+import org.springframework.web.util.UriUtils;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
+import reactor.core.scheduler.Schedulers;
+import run.halo.app.core.extension.attachment.Attachment;
+import run.halo.app.core.extension.attachment.Constant;
+import run.halo.app.core.extension.attachment.Policy;
+import run.halo.app.extension.ConfigMap;
+import run.halo.app.extension.Metadata;
+import run.halo.app.extension.ReactiveExtensionClient;
+import run.halo.app.infra.utils.JsonUtils;
+import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
+import software.amazon.awssdk.regions.Region;
+import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.S3Configuration;
+import software.amazon.awssdk.services.s3.model.HeadObjectRequest;
+import software.amazon.awssdk.services.s3.model.ListObjectsV2Request;
+import software.amazon.awssdk.services.s3.model.S3Object;
+
+import java.net.URI;
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Function;
+import java.util.stream.Collectors;
+
+import static run.halo.s3os.S3OsAttachmentHandler.OBJECT_KEY;
+
+
+@Service
+@RequiredArgsConstructor
+@Slf4j
+public class S3LinkServiceImpl implements S3LinkService {
+    private final ReactiveExtensionClient client;
+    private final S3OsAttachmentHandler handler;
+
+
+    @Override
+    public Flux<Policy> listS3Policies() {
+        return client.list(Policy.class, (policy) -> "s3os".equals(
+            policy.getSpec().getTemplateName()), null);
+    }
+
+    @Override
+    public Mono<S3ListResult> listObjects(String policyName, String continuationToken,
+        Integer pageSize) {
+        return client.fetch(Policy.class, policyName)
+            .flatMap((policy) -> {
+                var configMapName = policy.getSpec().getConfigMapName();
+                return client.fetch(ConfigMap.class, configMapName);
+            })
+            .flatMap((configMap) -> {
+                var properties = handler.getProperties(configMap);
+                return Mono.using(() -> handler.buildS3Client(properties),
+                        (s3Client) -> Mono.fromCallable(
+                            () -> s3Client.listObjectsV2(ListObjectsV2Request.builder()
+                                .bucket(properties.getBucket())
+                                .prefix(StringUtils.isNotEmpty(properties.getLocation())
+                                    ? properties.getLocation() + "/" : null)
+                                .delimiter("/")
+                                .maxKeys(pageSize)
+                                .continuationToken(StringUtils.isNotEmpty(continuationToken)
+                                    ? continuationToken : null)
+                                .build())).subscribeOn(Schedulers.boundedElastic()),
+                        S3Client::close)
+                    .flatMap(listObjectsV2Response -> {
+                        List<S3Object> contents = listObjectsV2Response.contents();
+                        var objectVos = contents
+                            .stream().map(S3ListResult.ObjectVo::fromS3Object)
+                            .filter(objectVo -> !objectVo.getKey().endsWith("/"))
+                            .collect(Collectors.toMap(S3ListResult.ObjectVo::getKey, o -> o));
+                        return client.list(Attachment.class,
+                                attachment -> policyName.equals(
+                                    attachment.getSpec().getPolicyName()), null)
+                            .doOnNext(attachment -> {
+                                S3ListResult.ObjectVo objectVo =
+                                    objectVos.get(attachment.getMetadata().getAnnotations()
+                                        .getOrDefault(OBJECT_KEY, ""));
+                                if (objectVo != null) {
+                                    objectVo.setIsLinked(true);
+                                }
+                            })
+                            .then()
+                            .thenReturn(new S3ListResult(new ArrayList<>(objectVos.values()),
+                                listObjectsV2Response.continuationToken(),
+                                null, null,
+                                listObjectsV2Response.nextContinuationToken(),
+                                listObjectsV2Response.isTruncated()));
+                    });
+            });
+    }
+
+    @Override
+    public Mono<S3ListResult> listObjectsUnlinked(String policyName, String continuationToken,
+        String continuationObject, Integer pageSize) {
+        // TODO 优化成查一次数据库
+        return Mono.defer(() -> {
+            List<S3ListResult.ObjectVo> s3Objects = new ArrayList<>();
+            AtomicBoolean continuationObjectMatched = new AtomicBoolean(false);
+            AtomicReference<String> currToken = new AtomicReference<>(continuationToken);
+
+            return Flux.defer(() -> Flux.just(
+                    new TokenState(null, currToken.get() == null ? "" : currToken.get())))
+                .flatMap(tokenState -> listObjects(policyName, tokenState.nextToken, pageSize))
+                .flatMap(s3ListResult -> {
+                    var filteredObjects = s3ListResult.getObjects();
+                    if (!continuationObjectMatched.get()) {
+                        // 判断s3ListResult.getObjects()里是否有continuationObject
+                        var continuationObjectVo = s3ListResult.getObjects().stream()
+                            .filter(objectVo -> objectVo.getKey().equals(continuationObject))
+                            .findFirst();
+                        if (continuationObjectVo.isPresent()) {
+                            s3Objects.clear();
+                            // 删除continuationObject及之前的所有对象
+                            filteredObjects = s3ListResult.getObjects().stream()
+                                .dropWhile(objectVo -> !objectVo.getKey()
+                                    .equals(continuationObject))
+                                .skip(1)
+                                .toList();
+                            continuationObjectMatched.set(true);
+                        }
+                    }
+                    filteredObjects = filteredObjects.stream()
+                        .filter(objectVo -> !objectVo.getIsLinked())
+                        .toList();
+                    s3Objects.addAll(filteredObjects);
+                    currToken.set(s3ListResult.getNextToken());
+                    return Mono.just(new TokenState(s3ListResult.getCurrentToken(),
+                        s3ListResult.getNextToken()));
+                })
+                .repeat()
+                .takeUntil(
+                    tokenState -> tokenState.nextToken() == null || s3Objects.size() >= pageSize)
+                .last()
+                .map(tokenState -> {
+                    var limitedObjects = s3Objects.stream().limit(pageSize).toList();
+                    return new S3ListResult(limitedObjects, continuationToken, continuationObject,
+                            !limitedObjects.isEmpty() ? limitedObjects.get(limitedObjects.size() - 1)
+                            .getKey() : null, tokenState.currToken,
+                        limitedObjects.size() == pageSize);
+                });
+        });
+    }
+
+    record TokenState(String currToken, String nextToken) {
+    }
+
+
+    @Override
+    public Mono<LinkResult.LinkResultItem> addAttachmentRecord(String policyName,
+        String objectKey) {
+        return authenticationConsumer(authentication -> client.fetch(Policy.class, policyName)
+            // TODO 检查是否已经存在
+            .flatMap((policy) -> {
+                var configMapName = policy.getSpec().getConfigMapName();
+                return client.fetch(ConfigMap.class, configMapName);
+            })
+            .flatMap(configMap -> {
+                var properties = handler.getProperties(configMap);
+                return Mono.using(() -> handler.buildS3Client(properties),
+                        (s3Client) -> Mono.fromCallable(
+                                () -> s3Client.headObject(
+                                    HeadObjectRequest.builder()
+                                        .bucket(properties.getBucket())
+                                        .key(objectKey)
+                                        .build()))
+                            .subscribeOn(Schedulers.boundedElastic()),
+                        S3Client::close)
+                    .map(headObjectResponse -> {
+                        String externalLink = handler.getObjectURL(properties, objectKey);
+                        var metadata = new Metadata();
+                        metadata.setName(UUID.randomUUID().toString());
+                        metadata.setAnnotations(
+                            Map.of(OBJECT_KEY, objectKey, Constant.EXTERNAL_LINK_ANNO_KEY,
+                                UriUtils.encodePath(externalLink, StandardCharsets.UTF_8)));
+
+                        var spec = new Attachment.AttachmentSpec();
+                        spec.setSize(headObjectResponse.contentLength());
+                        spec.setDisplayName(objectKey.substring(objectKey.lastIndexOf("/") + 1));
+                        spec.setMediaType(headObjectResponse.contentType());
+
+                        var attachment = new Attachment();
+                        attachment.setMetadata(metadata);
+                        attachment.setSpec(spec);
+                        return attachment;
+                    })
+                    .doOnNext(attachment -> {
+                        var spec = attachment.getSpec();
+                        if (spec == null) {
+                            spec = new Attachment.AttachmentSpec();
+                            attachment.setSpec(spec);
+                        }
+                        spec.setOwnerName(authentication.getName());
+                        spec.setPolicyName(policyName);
+                    })
+                    .flatMap(client::create)
+                    .thenReturn(new LinkResult.LinkResultItem(objectKey, true, null));
+            }))
+            .onErrorResume(throwable ->
+                Mono.just(new LinkResult.LinkResultItem(objectKey, false, throwable.getMessage())));
+    }
+
+    private <T> Mono<T> authenticationConsumer(Function<Authentication, Mono<T>> func) {
+        return ReactiveSecurityContextHolder.getContext()
+            .switchIfEmpty(Mono.error(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED,
+                "Authentication required.")))
+            .map(SecurityContext::getAuthentication)
+            .flatMap(func);
+    }
+
+}

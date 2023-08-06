@@ -64,8 +64,8 @@ import software.amazon.awssdk.utils.SdkAutoCloseable;
 @Extension
 public class S3OsAttachmentHandler implements AttachmentHandler {
 
-    private static final String OBJECT_KEY = "s3os.plugin.halo.run/object-key";
-    private static final int MULTIPART_MIN_PART_SIZE = 5 * 1024 * 1024;
+    public static final String OBJECT_KEY = "s3os.plugin.halo.run/object-key";
+    public static final int MULTIPART_MIN_PART_SIZE = 5 * 1024 * 1024;
     private final Map<String, Object> uploadingFile = new ConcurrentHashMap<>();
 
     @Override
@@ -193,7 +193,7 @@ public class S3OsAttachmentHandler implements AttachmentHandler {
         return attachment;
     }
 
-    private String getObjectURL(S3OsProperties properties, String objectKey) {
+    String getObjectURL(S3OsProperties properties, String objectKey) {
         String objectURL;
         if (StringUtils.isBlank(properties.getDomain())) {
             String host;
