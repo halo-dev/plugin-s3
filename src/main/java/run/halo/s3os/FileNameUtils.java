@@ -4,6 +4,9 @@ import com.google.common.io.Files;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.commons.lang3.StringUtils;
 
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
 public final class FileNameUtils {
 
     private FileNameUtils() {
@@ -15,6 +18,23 @@ public final class FileNameUtils {
         }
         var extPattern = "(?<!^)[.]" + (removeAllExtensions ? ".*" : "[^.]*$");
         return filename.replaceAll(extPattern, "");
+    }
+
+    public static String getExtension(String filename) {
+        String s = null;
+        if (filename == null || filename.isEmpty()) {
+            return s;
+        }
+        String reg = "(?<!^)[.].*";
+        Pattern pattern = Pattern.compile(reg);
+        Matcher matcher = pattern.matcher(filename);
+        while (matcher.find()) {
+            s = matcher.group();
+        }
+        if (s == null || s.isEmpty()) {
+            return "";
+        }
+        return s;
     }
 
     /**

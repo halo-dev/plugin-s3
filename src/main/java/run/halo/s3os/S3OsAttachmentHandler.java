@@ -470,6 +470,10 @@ public class S3OsAttachmentHandler implements AttachmentHandler {
         public UploadState(S3OsProperties properties, String fileName) {
             this.properties = properties;
             this.originalFileName = fileName;
+
+            fileName = properties.getNeedRandomFilename() ?
+                    UUID.randomUUID().toString().toUpperCase() + FileNameUtils.getExtension(fileName) : fileName;
+
             this.fileName = fileName;
             this.objectKey = properties.getObjectName(fileName);
             this.contentType = MediaTypeFactory.getMediaType(fileName)

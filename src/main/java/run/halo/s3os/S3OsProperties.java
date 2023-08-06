@@ -23,6 +23,8 @@ class S3OsProperties {
      */
     private String location;
 
+    private Boolean needRandomFilename = false;
+
     private Protocol protocol = Protocol.https;
 
     /**
