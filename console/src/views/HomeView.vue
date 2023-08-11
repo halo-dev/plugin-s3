@@ -15,7 +15,6 @@ import {
 } from "@halo-dev/components";
 import CarbonFolderDetailsReference from "~icons/carbon/folder-details-reference";
 import {computed, onMounted, ref, watch} from "vue";
-import FilterCleanButton from "@/components/filter/FilterCleanButton.vue";
 import {
   getApisApiPluginHaloRunV1Alpha1PluginsPluginS3ObjectStorageObjectsByPolicyName,
   getApisApiPluginHaloRunV1Alpha1PluginsPluginS3ObjectStoragePoliciesS3,
