@@ -25,12 +25,14 @@ public final class FileNameUtils {
         if (filename == null || filename.isEmpty()) {
             return s;
         }
+
         String reg = "(?<!^)[.].*";
         Pattern pattern = Pattern.compile(reg);
         Matcher matcher = pattern.matcher(filename);
         while (matcher.find()) {
             s = matcher.group();
         }
+
         if (s == null || s.isEmpty()) {
             return "";
         }
