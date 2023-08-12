@@ -182,22 +182,11 @@ public class S3LinkServiceImpl implements S3LinkService {
                             .subscribeOn(Schedulers.boundedElastic()),
                         S3Client::close)
                     .map(headObjectResponse -> {
-                        String externalLink = handler.getObjectURL(properties, objectKey);
-                        var metadata = new Metadata();
-                        metadata.setName(UUID.randomUUID().toString());
-                        metadata.setAnnotations(
-                            Map.of(OBJECT_KEY, objectKey, Constant.EXTERNAL_LINK_ANNO_KEY,
-                                UriUtils.encodePath(externalLink, StandardCharsets.UTF_8)));
-
-                        var spec = new Attachment.AttachmentSpec();
-                        spec.setSize(headObjectResponse.contentLength());
-                        spec.setDisplayName(objectKey.substring(objectKey.lastIndexOf("/") + 1));
-                        spec.setMediaType(headObjectResponse.contentType());
-
-                        var attachment = new Attachment();
-                        attachment.setMetadata(metadata);
-                        attachment.setSpec(spec);
-                        return attachment;
+                        var objectDetail = new S3OsAttachmentHandler.ObjectDetail(
+                                new S3OsAttachmentHandler.UploadState(properties,
+                                        FileNameUtils.extractFileNameFromS3Key(objectKey)),
+                                headObjectResponse);
+                        return handler.buildAttachment(properties, objectDetail);
                     })
                     .doOnNext(attachment -> {
                         var spec = attachment.getSpec();
