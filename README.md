@@ -4,8 +4,10 @@
 
 ## 使用方法
 
-1. 在 [Releases](https://github.com/halo-sigs/plugin-s3/releases) 下载最新的 JAR 文件。
-2. 在 Halo 后台的插件管理上传 JAR 文件进行安装。
+1. 下载，目前提供以下两个下载方式：
+    - GitHub Releases：访问 [Releases](https://github.com/halo-sigs/plugin-s3/releases) 下载 Assets 中的 JAR 文件。
+    - Halo 应用市场：<https://halo.run/store/apps/app-Qxhpp>
+2. 安装，插件安装和更新方式可参考：<https://docs.halo.run/user-guide/plugins>
 3. 进入后台附件管理。
 4. 点击右上角的存储策略，在存储策略弹框的右上角可新建 S3 Object Storage 存储策略。
 5. 创建完成之后即可在上传的时候选择新创建的 S3 Object Storage 存储策略。
