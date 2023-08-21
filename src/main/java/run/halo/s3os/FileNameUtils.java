@@ -4,8 +4,9 @@ import com.google.common.io.Files;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.commons.lang3.StringUtils;
 
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.UUID;
 
 public final class FileNameUtils {
 
@@ -20,21 +21,16 @@ public final class FileNameUtils {
         return filename.replaceAll(extPattern, "");
     }
 
-    public static String getExtension(String filename) {
-        String s = null;
-        if (filename == null || filename.isEmpty()) {
-            return s;
-        }
-        String reg = "(?<!^)[.].*";
-        Pattern pattern = Pattern.compile(reg);
-        Matcher matcher = pattern.matcher(filename);
-        while (matcher.find()) {
-            s = matcher.group();
-        }
-        if (s == null || s.isEmpty()) {
-            return "";
-        }
-        return s;
+    public static String getRandomFilename(String filename, Integer length, String mode) {
+        return switch (mode) {
+//            case "none" -> filename;
+            case "withString" -> randomFilenameWithString(filename, length);
+            case "dateWithString" -> randomDateWithString(filename, length);
+            case "datetimeWithString" -> randomDatetimeWithString(filename, length);
+            case "string" -> randomString(filename, length);
+            case "uuid" -> randomUuid(filename);
+            default -> filename;
+        };
     }
 
     /**
@@ -46,19 +42,53 @@ public final class FileNameUtils {
      * </pre>
      *
      * @param filename is name of file.
-     * @param length is for generating random string with specific length.
+     * @param length   is for generating random string with specific length.
      * @return File name with random string.
      */
-    public static String randomFileName(String filename, int length) {
-        var nameWithoutExt = Files.getNameWithoutExtension(filename);
-        var ext = Files.getFileExtension(filename);
-        var random = RandomStringUtils.randomAlphabetic(length).toLowerCase();
-        if (StringUtils.isBlank(nameWithoutExt)) {
-            return random + "." + ext;
+    public static String randomFilenameWithString(String filename, Integer length) {
+        String random = RandomStringUtils.randomAlphabetic(length).toLowerCase();
+        return randomFilename(filename, random, true);
+    }
+
+    private static String randomDateWithString(String filename, Integer length) {
+        String random = LocalDate.now() + "-" + RandomStringUtils.randomAlphabetic(length).toLowerCase();
+        return randomFilename(filename, random, false);
+    }
+
+    private static String randomDatetimeWithString(String filename, Integer length) {
+        String random = LocalDateTime.now() + "-" + RandomStringUtils.randomAlphabetic(length).toLowerCase();
+        return randomFilename(filename, random, false);
+    }
+
+    private static String randomString(String filename, Integer length) {
+        String random = RandomStringUtils.randomAlphabetic(length).toLowerCase();
+        return randomFilename(filename, random, false);
+    }
+
+    private static String randomUuid(String filename) {
+        String random = UUID.randomUUID().toString().toUpperCase();
+        return randomFilename(filename, random, false);
+    }
+
+    private static String randomFilename(String filename, String random, Boolean needOriginalName) {
+        String nameWithoutExtension = Files.getNameWithoutExtension(filename);
+        String extension = Files.getFileExtension(filename);
+        boolean nameIsEmpty = StringUtils.isBlank(nameWithoutExtension);
+        boolean extensionIsEmpty = StringUtils.isBlank(extension);
+        if (needOriginalName) {
+            if (nameIsEmpty) {
+                return random + "." + extension;
+            }
+            if (extensionIsEmpty) {
+                return nameWithoutExtension + "-" + random;
+            }
+            return nameWithoutExtension + "-" + random + "." + extension;
         }
-        if (StringUtils.isBlank(ext)) {
-            return nameWithoutExt + "-" + random;
+        else {
+            if (extensionIsEmpty) {
+                return random;
+            }
+            return random + "." + extension;
         }
-        return nameWithoutExt + "-" + random + "." + ext;
     }
 }

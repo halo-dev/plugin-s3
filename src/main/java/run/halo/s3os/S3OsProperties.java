@@ -23,7 +23,9 @@ class S3OsProperties {
      */
     private String location;
 
-    private Boolean needRandomFilename = false;
+    private String randomFilenameMode = "none";
+
+    private Integer randomStringLength = 8;
 
     private Protocol protocol = Protocol.https;
 
@@ -64,6 +66,18 @@ class S3OsProperties {
             location = "";
         }
         this.location = location;
+    }
+
+    public void setRandomStringLength(String randomStringLength) {  // if you use Integer, it will throw Error.
+        try {
+            int length = Integer.parseInt(randomStringLength);
+            if (length >= 4 && length <= 16) {
+                this.randomStringLength = length;
+            }
+        }
+        catch (NumberFormatException e) {
+            this.randomStringLength = 8;
+        }
     }
 
     public void setRegion(String region) {
