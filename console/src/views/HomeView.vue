@@ -16,9 +16,9 @@ import {
 import CarbonFolderDetailsReference from "~icons/carbon/folder-details-reference";
 import {computed, onMounted, ref, watch} from "vue";
 import {
-  getApisApiPluginHaloRunV1Alpha1PluginsPluginS3ObjectStorageObjectsByPolicyName,
-  getApisApiPluginHaloRunV1Alpha1PluginsPluginS3ObjectStoragePoliciesS3,
-  postApisApiPluginHaloRunV1Alpha1PluginsPluginS3ObjectStorageAttachmentsLink,
+  getApisS3OsHaloRunV1Alpha1ObjectsByPolicyName,
+  getApisS3OsHaloRunV1Alpha1PoliciesS3,
+  postApisS3OsHaloRunV1Alpha1AttachmentsLink,
 } from "@/controller";
 import type {ObjectVo, S3ListResult} from "@/interface";
 
@@ -88,7 +88,7 @@ const handleCheckAllChange = (e: Event) => {
 
 const fetchPolicies = async () => {
   try {
-    const policiesData = await getApisApiPluginHaloRunV1Alpha1PluginsPluginS3ObjectStoragePoliciesS3();
+    const policiesData = await getApisS3OsHaloRunV1Alpha1PoliciesS3();
     if (policiesData.status == 200) {
       policyOptions.value = [{
         label: "请选择策略",
@@ -145,7 +145,7 @@ const fetchObjects = async () => {
   isFetching.value = true;
   s3Objects.value.objects = [];
   try {
-    const objectsData = await getApisApiPluginHaloRunV1Alpha1PluginsPluginS3ObjectStorageObjectsByPolicyName({
+    const objectsData = await getApisS3OsHaloRunV1Alpha1ObjectsByPolicyName({
       policyName: policyName.value,
       pageSize: size.value,
       continuationToken: s3Objects.value.currentToken,
@@ -181,7 +181,7 @@ const handleLink = async () => {
   isLinking.value = true;
   isShowModal.value = true;
   linkTips.value = `正在关联${selectedFiles.value.length}个文件`;
-  const linkResult = await postApisApiPluginHaloRunV1Alpha1PluginsPluginS3ObjectStorageAttachmentsLink({
+  const linkResult = await postApisS3OsHaloRunV1Alpha1AttachmentsLink({
     policyName: policyName.value,
     objectKeys: selectedFiles.value
   });

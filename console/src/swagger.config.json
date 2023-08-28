@@ -1,5 +1,5 @@
 {
-  "docsUrl": "http://localhost:8090/v3/api-docs/plugin-custom-api",
+  "docsUrl": "http://localhost:8090/v3/api-docs/extension-api",
   "includeTags": ["s-3-link-controller"],
   "excludeTags": [],
   "axiosInstanceUrl": "@/utils/request",

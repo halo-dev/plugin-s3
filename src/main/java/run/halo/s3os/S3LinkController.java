@@ -7,7 +7,7 @@ import reactor.core.publisher.Mono;
 import run.halo.app.core.extension.attachment.Policy;
 import run.halo.app.plugin.ApiVersion;
 
-@ApiVersion("v1alpha1")
+@ApiVersion("s3os.halo.run/v1alpha1")
 @RestController
 @RequiredArgsConstructor
 public class S3LinkController {
