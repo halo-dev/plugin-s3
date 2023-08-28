@@ -21,7 +21,6 @@ import {
   postApisApiPluginHaloRunV1Alpha1PluginsPluginS3ObjectStorageAttachmentsLink,
 } from "@/controller";
 import type {ObjectVo, S3ListResult} from "@/interface";
-import AttachmentFileTypeIcon from "@/components/AttachmentFileTypeIcon.vue";
 
 const selectedFiles = ref<string[]>([]);
 const policyName = ref<string>("");
