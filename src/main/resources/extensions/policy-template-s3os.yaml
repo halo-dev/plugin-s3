@@ -61,6 +61,29 @@ spec:
           label: 上传目录
           placeholder: 如不填写，则默认上传到根目录
         - $formkit: select
+          name: randomFilenameMode
+          label: 上传时重命名文件方式
+          options:
+            - label: 保留原文件名
+              value: none
+            - label: 使用原文件名 + 随机字符串
+              value: withString
+            - label: 使用日期 + 随机字符串
+              value: dateWithString
+            - label: 使用日期时间 + 随机字符串
+              value: datetimeWithString
+            - label: 使用随机字符串
+              value: string
+            - label: 使用UUID
+              value: uuid
+          validation: required
+        - $formkit: number
+          name: randomStringLength
+          label: 随机字符串长度
+          min: 4
+          max: 16
+          placeholder: 仅在重命名文件时需要随机字符串时填写(支持4~16位, 默认为8位)
+        - $formkit: select
           name: protocol
           label: 绑定域名协议
           options:
