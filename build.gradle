@@ -2,7 +2,7 @@ plugins {
     id 'java'
     id "com.github.node-gradle.node" version "3.3.0"
     id "io.freefair.lombok" version "8.0.1"
-    id "run.halo.plugin.devtools" version "0.0.5"
+    id "run.halo.plugin.devtools" version "0.0.6"
 }
 
 group 'run.halo.s3os'
@@ -14,7 +14,6 @@ repositories {
     maven { url 'https://s01.oss.sonatype.org/content/repositories/snapshots/' }
     maven { url 'https://repo.spring.io/milestone' }
 }
-
 dependencies {
     implementation platform('run.halo.tools.platform:plugin:2.8.0-SNAPSHOT')
     compileOnly 'run.halo.app:api'
@@ -28,6 +27,18 @@ dependencies {
     testImplementation 'run.halo.app:api'
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testImplementation 'io.projectreactor:reactor-test'
+}
+
+halo {
+    version = '2.8.0'
+}
+
+haloPlugin {
+    watchDomains {
+        consoleSource {
+            files files('console/src/')
+        }
+    }
 }
 
 test {

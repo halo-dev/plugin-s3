@@ -4,7 +4,6 @@ metadata:
   name: PluginS3ObjectStorage
 spec:
   enabled: true
-  version: 1.4.1
   requires: ">=2.8.0"
   author:
     name: longjuan
