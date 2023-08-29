@@ -75,9 +75,7 @@ class S3OsProperties {
                 this.randomStringLength = length;
             }
         }
-        catch (NumberFormatException e) {
-            this.randomStringLength = 8;
-        }
+        catch (NumberFormatException ignored) { }
     }
 
     public void setRegion(String region) {
