@@ -391,7 +391,7 @@ public class S3OsAttachmentHandler implements AttachmentHandler {
                         uploadingFile.remove(uploadState.getUploadingMapKey());
                         uploadState.needRemoveMapKey = false;
                     }
-                    uploadState.randomFileName();
+                    uploadState.randomDuplicateFileName();
                 })
             )
             .onErrorMap(Exceptions::isRetryExhausted,
@@ -470,6 +470,10 @@ public class S3OsAttachmentHandler implements AttachmentHandler {
         public UploadState(S3OsProperties properties, String fileName) {
             this.properties = properties;
             this.originalFileName = fileName;
+
+            fileName = FileNameUtils.getRandomFilename(fileName,
+                    properties.getRandomStringLength(), properties.getRandomFilenameMode());
+
             this.fileName = fileName;
             this.objectKey = properties.getObjectName(fileName);
             this.contentType = MediaTypeFactory.getMediaType(fileName)
@@ -480,8 +484,8 @@ public class S3OsAttachmentHandler implements AttachmentHandler {
             return properties.getBucket() + "/" + objectKey;
         }
 
-        public void randomFileName() {
-            this.fileName = FileNameUtils.randomFileName(originalFileName, 4);
+        public void randomDuplicateFileName() {
+            this.fileName = FileNameUtils.randomFilenameWithString(originalFileName, 4);
             this.objectKey = properties.getObjectName(fileName);
         }
     }
