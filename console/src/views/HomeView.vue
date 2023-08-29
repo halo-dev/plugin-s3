@@ -20,7 +20,7 @@ import {
   getApisS3OsHaloRunV1Alpha1PoliciesS3,
   postApisS3OsHaloRunV1Alpha1AttachmentsLink,
 } from "@/controller";
-import type {ObjectVo, S3ListResult} from "@/interface";
+import type {ObjectVo, S3ListResult, Policy} from "@/interface";
 
 const selectedFiles = ref<string[]>([]);
 const policyName = ref<string>("");
@@ -76,9 +76,9 @@ const handleCheckAllChange = (e: Event) => {
 
   if (checked) {
     selectedFiles.value =
-        s3Objects.value.objects?.filter(file => !file.isLinked).map((file) => {
-          return file.key || "";
-        }) || [];
+      s3Objects.value.objects?.filter(file => !file.isLinked).map((file) => {
+        return file.key || "";
+      }) || [];
   } else {
     selectedFiles.value.length = 0;
     checkedAll.value = false;
@@ -95,7 +95,7 @@ const fetchPolicies = async () => {
         value: "",
         attrs: {disabled: true}
       }];
-      policiesData.data.forEach((policy) => {
+      policiesData.data.forEach((policy: Policy) => {
         policyOptions.value.push({
           label: policy.spec.displayName,
           value: policy.metadata.name,
@@ -116,11 +116,11 @@ onMounted(() => {
 
 watch(selectedFiles, (newValue) => {
   checkedAll.value = s3Objects.value.objects?.filter(file => !file.isLinked)
-          .filter(file => !newValue.includes(file.key || "")).length == 0
-      && s3Objects.value.objects?.length != 0;
+      .filter(file => !newValue.includes(file.key || "")).length == 0
+    && s3Objects.value.objects?.length != 0;
 });
 
-watch(selectedLinkedStatusItem, (newValue) => {
+watch(selectedLinkedStatusItem, () => {
   handleFirstPage();
 });
 
@@ -242,33 +242,33 @@ const handleModalClose = () => {
       <template #header>
         <div class="block w-full bg-gray-50 px-4 py-3">
           <div
-              class="relative flex flex-col items-start sm:flex-row sm:items-center"
+            class="relative flex flex-col items-start sm:flex-row sm:items-center"
           >
             <div
-                v-permission="['system:users:aaa']"
-                class="mr-4 hidden items-center sm:flex"
+              v-permission="['system:users:aaa']"
+              class="mr-4 hidden items-center sm:flex"
             >
               <input
-                  v-model="checkedAll"
-                  class="h-4 w-4 rounded border-gray-300 text-indigo-600"
-                  type="checkbox"
-                  @change="handleCheckAllChange"
+                v-model="checkedAll"
+                class="h-4 w-4 rounded border-gray-300 text-indigo-600"
+                type="checkbox"
+                @change="handleCheckAllChange"
               />
             </div>
             <div class="flex w-full flex-1 items-center sm:w-auto">
               <div
-                  v-if="!selectedFiles.length"
-                  class="flex items-center gap-2"
+                v-if="!selectedFiles.length"
+                class="flex items-center gap-2"
               >
                 策略:
                 <FormKit
-                    id="policyChoose"
-                    outer-class="!p-0 w-48"
-                    v-model="policyName"
-                    name="policyName"
-                    type="select"
-                    :options="policyOptions"
-                    @change="fetchObjects()"
+                  id="policyChoose"
+                  outer-class="!p-0 w-48"
+                  v-model="policyName"
+                  name="policyName"
+                  type="select"
+                  :options="policyOptions"
+                  @change="fetchObjects()"
                 ></FormKit>
               </div>
               <VSpace v-else>
@@ -280,26 +280,26 @@ const handleModalClose = () => {
             <div class="mt-4 flex sm:mt-0">
               <VSpace spacing="lg">
                 <FilterCleanButton
-                    v-if="selectedLinkedStatusItem != linkedStatusItems[0].value"
-                    @click="selectedLinkedStatusItem = linkedStatusItems[0].value"
+                  v-if="selectedLinkedStatusItem != linkedStatusItems[0].value"
+                  @click="selectedLinkedStatusItem = linkedStatusItems[0].value"
                 />
                 <FilterDropdown
-                    v-model="selectedLinkedStatusItem"
-                    :label="$t('core.common.filters.labels.status')"
-                    :items="linkedStatusItems"
+                  v-model="selectedLinkedStatusItem"
+                  :label="$t('core.common.filters.labels.status')"
+                  :items="linkedStatusItems"
                 />
 
                 <div class="flex flex-row gap-2">
                   <div
-                      class="group cursor-pointer rounded p-1 hover:bg-gray-200"
-                      @click="fetchObjects()"
+                    class="group cursor-pointer rounded p-1 hover:bg-gray-200"
+                    @click="fetchObjects()"
                   >
                     <IconRefreshLine
-                        v-tooltip="$t('core.common.buttons.refresh')"
-                        :class="{
+                      v-tooltip="$t('core.common.buttons.refresh')"
+                      :class="{
                         'animate-spin text-gray-900': isFetching,
                       }"
-                        class="h-4 w-4 text-gray-600 group-hover:text-gray-900"
+                      class="h-4 w-4 text-gray-600 group-hover:text-gray-900"
                     />
                   </div>
                 </div>
@@ -313,45 +313,45 @@ const handleModalClose = () => {
 
       <Transition v-else-if="!s3Objects.objects?.length" appear name="fade">
         <VEmpty
-            message="空空如也"
-            :title="emptyTips"
+          message="空空如也"
+          :title="emptyTips"
         >
         </VEmpty>
       </Transition>
 
       <Transition v-else appear name="fade">
         <ul
-            class="box-border h-full w-full divide-y divide-gray-100"
-            role="list"
+          class="box-border h-full w-full divide-y divide-gray-100"
+          role="list"
         >
           <li v-for="(file, index) in s3Objects.objects" :key="index">
             <VEntity :is-selected="checkSelection(file)">
               <template
-                  #checkbox
+                #checkbox
               >
                 <input
-                    v-model="selectedFiles"
-                    :value="file.key || ''"
-                    class="h-4 w-4 rounded border-gray-300 text-indigo-600"
-                    name="post-checkbox"
-                    :disabled="file.isLinked"
-                    type="checkbox"
+                  v-model="selectedFiles"
+                  :value="file.key || ''"
+                  class="h-4 w-4 rounded border-gray-300 text-indigo-600"
+                  name="post-checkbox"
+                  :disabled="file.isLinked"
+                  type="checkbox"
                 />
               </template>
               <template #start>
                 <VEntityField>
                   <template #description>
                     <AttachmentFileTypeIcon
-                        :display-ext="false"
-                        :file-name="file.displayName || ''"
-                        :width="8"
-                        :height="8"
+                      :display-ext="false"
+                      :file-name="file.displayName || ''"
+                      :width="8"
+                      :height="8"
                     />
                   </template>
                 </VEntityField>
                 <VEntityField
-                    :title="file.displayName || ''"
-                    :description="file.key || ''"
+                  :title="file.displayName || ''"
+                  :description="file.key || ''"
                 />
               </template>
               <template #end>
@@ -367,8 +367,8 @@ const handleModalClose = () => {
                 <VEntityField>
                   <template #description>
                     <VButton
-                        :disabled="file.isLinked || false"
-                        @click="selectOneAndLink(file)"
+                      :disabled="file.isLinked || false"
+                      @click="selectOneAndLink(file)"
                     >
                       关联
                     </VButton>
@@ -383,7 +383,7 @@ const handleModalClose = () => {
       <template #footer>
         <div class="bg-white sm:flex sm:items-center justify-between">
           <div class="inline-flex items-center gap-5">
-            <span class="text-xs text-gray-500 hidden md:flex">共 {{s3Objects.objects?.length}} 项数据</span>
+            <span class="text-xs text-gray-500 hidden md:flex">共 {{ s3Objects.objects?.length }} 项数据</span>
             <span class="text-xs text-gray-500 hidden md:flex">已自动过滤文件夹对象，页面实际显示数量少为正常现象</span>
           </div>
           <div class="inline-flex items-center gap-5">
@@ -398,14 +398,14 @@ const handleModalClose = () => {
             </div>
             <div class="inline-flex items-center gap-2">
               <select
-                  v-model="size"
-                  class="h-8 border outline-none rounded-base px-2 text-gray-800 text-sm border-gray-300"
-                  @change="handleFirstPage"
+                v-model="size"
+                class="h-8 border outline-none rounded-base px-2 text-gray-800 text-sm border-gray-300"
+                @change="handleFirstPage"
               >
                 <option
-                    v-for="(sizeOption, index) in [20, 50, 100, 200]"
-                    :key="index"
-                    :value="sizeOption"
+                  v-for="(sizeOption, index) in [20, 50, 100, 200]"
+                  :key="index"
+                  :value="sizeOption"
                 >
                   {{ sizeOption }}
                 </option>
@@ -418,19 +418,19 @@ const handleModalClose = () => {
     </VCard>
   </div>
   <VModal
-      :visible="isShowModal"
-      :fullscreen="false"
-      :title="'关联结果'"
-      :width="500"
-      :mount-to-body="true"
-      @close="handleModalClose"
+    :visible="isShowModal"
+    :fullscreen="false"
+    :title="'关联结果'"
+    :width="500"
+    :mount-to-body="true"
+    @close="handleModalClose"
   >
     <template #footer>
       <VSpace>
         <VButton
-            :loading="isLinking"
-            type="primary"
-            @click="handleModalClose"
+          :loading="isLinking"
+          type="primary"
+          @click="handleModalClose"
         >
           确定
         </VButton>
