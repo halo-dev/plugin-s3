@@ -16,7 +16,7 @@ repositories {
 }
 
 dependencies {
-    implementation platform('run.halo.tools.platform:plugin:2.8.0-SNAPSHOT')
+    implementation platform('run.halo.tools.platform:plugin:2.9.0-SNAPSHOT')
     compileOnly 'run.halo.app:api'
 
     implementation platform('software.amazon.awssdk:bom:2.19.8')
@@ -31,7 +31,7 @@ dependencies {
 }
 
 halo {
-    version = '2.8.0'
+    version = '2.9.0'
 }
 
 haloPlugin {
