@@ -20,7 +20,7 @@ import {
   getApisS3OsHaloRunV1Alpha1PoliciesS3,
   postApisS3OsHaloRunV1Alpha1AttachmentsLink,
 } from "@/controller";
-import type {ObjectVo, S3ListResult, Policy} from "@/interface";
+import type {ObjectVo, S3ListResult, Policy, LinkResultItem} from "@/interface";
 
 const selectedFiles = ref<string[]>([]);
 const policyName = ref<string>("");
@@ -46,6 +46,7 @@ const isLinking = ref(false);
 const isFetchingPolicies = ref(true);
 
 const linkTips = ref("");
+const linkFailedTable = ref<LinkResultItem[]>([]);
 const linkedStatusItems: { label: string; value?: boolean }[] = [
   {label: "全部"},
   {label: "未关联", value: true},
@@ -181,6 +182,7 @@ const handleLink = async () => {
   isLinking.value = true;
   isShowModal.value = true;
   linkTips.value = `正在关联${selectedFiles.value.length}个文件`;
+  linkFailedTable.value = [];
   const linkResult = await postApisS3OsHaloRunV1Alpha1AttachmentsLink({
     policyName: policyName.value,
     objectKeys: selectedFiles.value
@@ -191,9 +193,7 @@ const handleLink = async () => {
   linkTips.value = `关联成功${successCount}个文件，关联失败${failedCount}个文件`;
 
   if (failedCount > 0) {
-    const failedItems = linkResult.data.items.filter(item => !item.success);
-    const failedTips = failedItems.map(item => `${item.objectKey}:${item.message}`).join("\n");
-    linkTips.value = `${linkTips.value}\n${failedTips}`;
+    linkFailedTable.value = linkResult.data.items.filter(item => !item.success);
   }
   isLinking.value = false;
 };
@@ -438,6 +438,16 @@ const handleModalClose = () => {
     </template>
     <div class="flex flex-col">
       {{ linkTips }}
+      <table v-if="linkFailedTable.length != 0">
+        <tr>
+          <th class="border border-black font-normal">失败对象</th>
+          <th class="border border-black font-normal">失败原因</th>
+        </tr>
+        <tr v-for="failedInfo in linkFailedTable" :key="failedInfo.objectKey">
+          <th class="border border-black font-normal">{{failedInfo.objectKey}}</th>
+          <th class="border border-black font-normal">{{failedInfo.message}}</th>
+        </tr>
+      </table>
     </div>
   </VModal>
 </template>

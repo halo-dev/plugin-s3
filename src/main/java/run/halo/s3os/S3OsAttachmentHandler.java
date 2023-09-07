@@ -66,6 +66,10 @@ public class S3OsAttachmentHandler implements AttachmentHandler {
 
     public static final String OBJECT_KEY = "s3os.plugin.halo.run/object-key";
     public static final int MULTIPART_MIN_PART_SIZE = 5 * 1024 * 1024;
+
+    /**
+     * Map to store uploading file, used as a lock, key is bucket/objectKey, value is bucket/objectKey.
+     */
     private final Map<String, Object> uploadingFile = new ConcurrentHashMap<>();
 
     @Override
