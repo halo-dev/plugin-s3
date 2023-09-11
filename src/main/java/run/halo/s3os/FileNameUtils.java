@@ -91,4 +91,18 @@ public final class FileNameUtils {
             return random + "." + extension;
         }
     }
+
+    /**
+     * Extracts the file name from an Amazon S3 object key.
+     *
+     * @param objectKey The Amazon S3 object key from which to extract the file name.
+     * @return The extracted file name.
+     */
+    public static String extractFileNameFromS3Key(String objectKey) {
+        int lastSlashIndex = objectKey.lastIndexOf("/");
+        if (lastSlashIndex >= 0 && lastSlashIndex < objectKey.length() - 1) {
+            return objectKey.substring(lastSlashIndex + 1);
+        }
+        return objectKey;
+    }
 }
