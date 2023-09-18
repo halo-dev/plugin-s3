@@ -45,11 +45,13 @@ spec:
           help: 协议头请在上方设置，此处无需以"http://"或"https://"开头，系统会自动拼接
         - $formkit: password
           name: accessKey
-          label: Access Key
+          label: Access Key ID
+          placeholder: 存储桶用户标识(用户名)
           validation: required
         - $formkit: password
           name: accessSecret
-          label: Access Secret
+          label: Access Key Secret
+          placeholder: 存储桶秘钥(密码)
           validation: required
         - $formkit: text
           name: region
