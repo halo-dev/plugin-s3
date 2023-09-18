@@ -165,7 +165,6 @@ public class S3LinkServiceImpl implements S3LinkService {
     public Mono<LinkResult.LinkResultItem> addAttachmentRecord(String policyName,
         String objectKey) {
         return authenticationConsumer(authentication -> client.fetch(Policy.class, policyName)
-            // TODO 检查是否已经存在
             .flatMap((policy) -> {
                 var configMapName = policy.getSpec().getConfigMapName();
                 return client.fetch(ConfigMap.class, configMapName);
