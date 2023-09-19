@@ -41,8 +41,9 @@ class S3OsProperties {
 
     public String getObjectName(String filename) {
         var objectName = filename;
-        if (StringUtils.hasText(getLocation())) {
-            objectName = getLocation() + "/" + objectName;
+        var finalName = FilePathUtils.getFilePathByPlaceholder(getLocation());
+        if (StringUtils.hasText(finalName)) {
+            objectName = finalName + "/" + objectName;
         }
         return objectName;
     }
@@ -67,17 +68,6 @@ class S3OsProperties {
         } else {
             location = "";
         }
-
-        LocalDate localDate = LocalDate.now();
-        location = org.apache.commons.lang3.StringUtils.replaceEach(location,
-            new String[] {"${year}","${month}","${day}"},
-            new String[] {
-                 String.valueOf(localDate.getYear()),
-                 String.valueOf(localDate.getMonthValue()),
-                 String.valueOf(localDate.getDayOfMonth())
-            }
-        );
-
         this.location = location;
     }
 

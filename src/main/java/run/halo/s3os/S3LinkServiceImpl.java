@@ -66,12 +66,13 @@ public class S3LinkServiceImpl implements S3LinkService {
             })
             .flatMap((configMap) -> {
                 var properties = handler.getProperties(configMap);
+                var finalLocation = FilePathUtils.getFilePathByPlaceholder(properties.getLocation());
                 return Mono.using(() -> handler.buildS3Client(properties),
                         (s3Client) -> Mono.fromCallable(
                             () -> s3Client.listObjectsV2(ListObjectsV2Request.builder()
                                 .bucket(properties.getBucket())
-                                .prefix(StringUtils.isNotEmpty(properties.getLocation())
-                                    ? properties.getLocation() + "/" : null)
+                                .prefix(StringUtils.isNotEmpty(finalLocation)
+                                    ? finalLocation + "/" : null)
                                 .delimiter("/")
                                 .maxKeys(pageSize)
                                 .continuationToken(StringUtils.isNotEmpty(continuationToken)
