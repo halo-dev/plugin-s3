@@ -16,9 +16,9 @@ class S3OsProperties {
 
     private String endpoint;
 
-    private String accessKeyId;
+    private String accessKey;
 
-    private String accessKeySecret;
+    private String accessSecret;
 
     /**
      * 开头结尾已去除"/"

@@ -218,8 +218,8 @@ public class S3OsAttachmentHandler implements AttachmentHandler {
             .region(Region.of(properties.getRegion()))
             .endpointOverride(
                 URI.create(properties.getEndpointProtocol() + "://" + properties.getEndpoint()))
-            .credentialsProvider(() -> AwsBasicCredentials.create(properties.getAccessKeyId(),
-                properties.getAccessKeySecret()))
+            .credentialsProvider(() -> AwsBasicCredentials.create(properties.getAccessKey(),
+                properties.getAccessSecret()))
             .serviceConfiguration(S3Configuration.builder()
                 .chunkedEncodingEnabled(false)
                 .pathStyleAccessEnabled(properties.getEnablePathStyleAccess())
@@ -232,8 +232,8 @@ public class S3OsAttachmentHandler implements AttachmentHandler {
             .region(Region.of(properties.getRegion()))
             .endpointOverride(
                 URI.create(properties.getEndpointProtocol() + "://" + properties.getEndpoint()))
-            .credentialsProvider(() -> AwsBasicCredentials.create(properties.getAccessKeyId(),
-                properties.getAccessKeySecret()))
+            .credentialsProvider(() -> AwsBasicCredentials.create(properties.getAccessKey(),
+                properties.getAccessSecret()))
             .serviceConfiguration(S3Configuration.builder()
                 .chunkedEncodingEnabled(false)
                 .pathStyleAccessEnabled(properties.getEnablePathStyleAccess())
