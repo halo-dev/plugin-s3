@@ -3,6 +3,8 @@ package run.halo.s3os;
 import lombok.Data;
 import org.springframework.util.StringUtils;
 
+import java.time.LocalDate;
+
 @Data
 class S3OsProperties {
 
@@ -65,6 +67,17 @@ class S3OsProperties {
         } else {
             location = "";
         }
+
+        LocalDate localDate = LocalDate.now();
+        location = org.apache.commons.lang3.StringUtils.replaceEach(location,
+            new String[] {"${year}","${month}","${day}"},
+            new String[] {
+                 String.valueOf(localDate.getYear()),
+                 String.valueOf(localDate.getMonthValue()),
+                 String.valueOf(localDate.getDayOfMonth())
+            }
+        );
+
         this.location = location;
     }
 
