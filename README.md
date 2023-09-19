@@ -5,7 +5,7 @@
 ## 使用方法
 
 1. 下载，目前提供以下两个下载方式：
-    - GitHub Releases：访问 [Releases](https://github.com/halo-sigs/plugin-s3/releases) 下载 Assets 中的 JAR 文件。
+    - GitHub Releases：访问 [Releases](https://github.com/halo-dev/plugin-s3/releases) 下载 Assets 中的 JAR 文件。
     - Halo 应用市场：<https://halo.run/store/apps/app-Qxhpp>
 2. 安装，插件安装和更新方式可参考：<https://docs.halo.run/user-guide/plugins>
 3. 进入后台附件管理。
