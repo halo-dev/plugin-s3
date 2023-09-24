@@ -51,7 +51,7 @@ spec:
         - $formkit: password
           name: accessSecret
           label: Access Key Secret
-          placeholder: 存储桶秘钥(密码)
+          placeholder: 存储桶密钥(密码)
           validation: required
         - $formkit: text
           name: region
