@@ -55,20 +55,20 @@
 
 |服务商|文档|兼容访问风格|兼容性|
 | ----- | ---- | ----- | ----- |
-|阿里云|https://help.aliyun.com/document_detail/410748.html|Virtual Hosted Style|✅|
-|腾讯云|[https://cloud.tencent.com/document/product/436/41284](https://cloud.tencent.com/document/product/436/41284)|Virtual Hosted Style / <br>Path Style|✅|
-|七牛云|https://developer.qiniu.com/kodo/4088/s3-access-domainname|Virtual Hosted Style / <br>Path Style|✅|
-|百度云|https://cloud.baidu.com/doc/BOS/s/Fjwvyq9xo|Virtual Hosted Style / <br>Path Style|✅|
-|京东云| https://docs.jdcloud.com/cn/object-storage-service/api/regions-and-endpoints |Virtual Hosted Style|✅|
-|金山云|https://docs.ksyun.com/documents/6761|Virtual Hosted Style|✅|
-|青云|https://docsv3.qingcloud.com/storage/object-storage/s3/intro/|Virtual Hosted Style / <br>Path Style|✅|
-|网易数帆|[https://sf.163.com/help/documents/89796157866430464](https://sf.163.com/help/documents/89796157866430464)|Virtual Hosted Style|✅|
-|Cloudflare|Cloudflare S3 兼容性API<br>[https://developers.cloudflare.com/r2/data-access/s3-api/](https://developers.cloudflare.com/r2/data-access/s3-api/)|Virtual Hosted Style / <br>Path Style|✅|
-| Oracle Cloud |[https://docs.oracle.com/en-us/iaas/Content/Object/Tasks/s3compatibleapi.htm](https://docs.oracle.com/en-us/iaas/Content/Object/Tasks/s3compatibleapi.htm)|Virtual Hosted Style / <br>Path Style|✅|
+|阿里云|<https://help.aliyun.com/document_detail/410748.html>|Virtual Hosted Style|✅|
+|腾讯云|<https://cloud.tencent.com/document/product/436/41284>|Virtual Hosted Style / <br>Path Style|✅|
+|七牛云|<https://developer.qiniu.com/kodo/4088/s3-access-domainname>|Virtual Hosted Style / <br>Path Style|✅|
+|百度云|<https://cloud.baidu.com/doc/BOS/s/xjwvyq9l4>|Virtual Hosted Style / <br>Path Style|✅|
+|京东云|<https://docs.jdcloud.com/cn/object-storage-service/api/regions-and-endpoints>|Virtual Hosted Style|✅|
+|金山云|<https://docs.ksyun.com/documents/6761>|Virtual Hosted Style|✅|
+|青云|<https://docsv3.qingcloud.com/storage/object-storage/s3/intro/>|Virtual Hosted Style / <br>Path Style|✅|
+|网易数帆|<https://sf.163.com/help/documents/89796157866430464>|Virtual Hosted Style|✅|
+|Cloudflare|<https://developers.cloudflare.com/r2/data-access/s3-api/>|Virtual Hosted Style / <br>Path Style|✅|
+| Oracle Cloud |<https://docs.oracle.com/en-us/iaas/Content/Object/Tasks/s3compatibleapi.htm>|Virtual Hosted Style / <br>Path Style|✅|
+|又拍云|<https://help.upyun.com/knowledge-base/aws-s3%e5%85%bc%e5%ae%b9/>|Virtual Hosted Style / <br>Path Style|✅|
 |自建minio|\-|Path Style|✅|
 |华为云|文档未说明是否兼容，工单反馈不保证兼容性，实际测试可以使用|Virtual Hosted Style|❓|
-|Ucloud|只支持 8MB 大小的分片，本插件暂不支持<br>[https://docs.ucloud.cn/ufile/s3/s3\_introduction](https://docs.ucloud.cn/ufile/s3/s3_introduction)|\-|❌|
-|又拍云|暂不支持 s3 协议|\-|❌|
+|Ucloud|只支持 8MB 大小的分片，本插件暂不支持<br><https://docs.ucloud.cn/ufile/s3/s3_introduction>|\-|❌|
 
 ## 开发环境
 
