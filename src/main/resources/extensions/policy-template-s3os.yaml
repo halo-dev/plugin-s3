@@ -62,6 +62,7 @@ spec:
           name: location
           label: 上传目录
           placeholder: 如不填写，则默认上传到根目录
+          help: 支持使用 ${year} ${month} ${day} 占位符
         - $formkit: select
           name: randomFilenameMode
           label: 上传时重命名文件方式

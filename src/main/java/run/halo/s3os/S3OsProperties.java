@@ -3,6 +3,8 @@ package run.halo.s3os;
 import lombok.Data;
 import org.springframework.util.StringUtils;
 
+import java.time.LocalDate;
+
 @Data
 class S3OsProperties {
 
@@ -39,8 +41,9 @@ class S3OsProperties {
 
     public String getObjectName(String filename) {
         var objectName = filename;
-        if (StringUtils.hasText(getLocation())) {
-            objectName = getLocation() + "/" + objectName;
+        var finalName = FilePathUtils.getFilePathByPlaceholder(getLocation());
+        if (StringUtils.hasText(finalName)) {
+            objectName = finalName + "/" + objectName;
         }
         return objectName;
     }
