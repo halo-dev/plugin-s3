@@ -65,6 +65,7 @@ import software.amazon.awssdk.utils.SdkAutoCloseable;
 public class S3OsAttachmentHandler implements AttachmentHandler {
 
     public static final String OBJECT_KEY = "s3os.plugin.halo.run/object-key";
+    public static final String URL_SUFFIX_ANNO_KEY = "s3os.plugin.halo.run/url-suffix";
     public static final int MULTIPART_MIN_PART_SIZE = 5 * 1024 * 1024;
 
     /**
@@ -157,6 +158,10 @@ public class S3OsAttachmentHandler implements AttachmentHandler {
         }
         var properties = getProperties(configMap);
         var objectURL = getObjectURL(properties, objectKey);
+        var urlSuffix = getUrlSuffixAnnotation(attachment);
+        if (StringUtils.isNotBlank(urlSuffix)) {
+            objectURL += urlSuffix;
+        }
         return Mono.just(URI.create(objectURL));
     }
 
@@ -169,6 +174,15 @@ public class S3OsAttachmentHandler implements AttachmentHandler {
         return annotations.get(OBJECT_KEY);
     }
 
+    @Nullable
+    private String getUrlSuffixAnnotation(Attachment attachment) {
+        var annotations = attachment.getMetadata().getAnnotations();
+        if (annotations == null) {
+            return null;
+        }
+        return annotations.get(URL_SUFFIX_ANNO_KEY);
+    }
+
     S3OsProperties getProperties(ConfigMap configMap) {
         var settingJson = configMap.getData().getOrDefault("default", "{}");
         return JsonUtils.jsonToObject(settingJson, S3OsProperties.class);
@@ -176,12 +190,19 @@ public class S3OsAttachmentHandler implements AttachmentHandler {
 
     Attachment buildAttachment(S3OsProperties properties, ObjectDetail objectDetail) {
         String externalLink = getObjectURL(properties, objectDetail.uploadState.objectKey);
+        var urlSuffix = UrlUtils.findUrlSuffix(properties.getUrlSuffixes(),
+            objectDetail.uploadState.fileName);
 
         var metadata = new Metadata();
         metadata.setName(UUID.randomUUID().toString());
-        metadata.setAnnotations(new HashMap<>(
-            Map.of(OBJECT_KEY, objectDetail.uploadState.objectKey,
-                Constant.EXTERNAL_LINK_ANNO_KEY, externalLink)));
+
+        var annotations = new HashMap<>(Map.of(OBJECT_KEY, objectDetail.uploadState.objectKey));
+        if (StringUtils.isNotBlank(urlSuffix)) {
+            externalLink += urlSuffix;
+            annotations.put(URL_SUFFIX_ANNO_KEY, urlSuffix);
+        }
+        annotations.put(Constant.EXTERNAL_LINK_ANNO_KEY, externalLink);
+        metadata.setAnnotations(annotations);
 
         var objectMetadata = objectDetail.objectMetadata();
         var spec = new AttachmentSpec();
