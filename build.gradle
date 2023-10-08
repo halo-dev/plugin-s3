@@ -21,14 +21,16 @@ dependencies {
 
     implementation platform('software.amazon.awssdk:bom:2.19.8')
     implementation 'software.amazon.awssdk:s3'
-    implementation "javax.xml.bind:jaxb-api:2.3.1"
-    implementation "javax.activation:activation:1.1.1"
-    implementation "org.glassfish.jaxb:jaxb-runtime:2.3.3"
 
     testImplementation 'run.halo.app:api'
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testImplementation 'io.projectreactor:reactor-test'
 }
+
+configurations.runtimeClasspath {
+    exclude group: 'org.reactivestreams', module: 'reactive-streams'
+}
+
 
 halo {
     version = '2.9.0'
