@@ -30,6 +30,11 @@ dependencies {
     testImplementation 'io.projectreactor:reactor-test'
 }
 
+configurations.runtimeClasspath {
+    exclude group: 'org.reactivestreams', module: 'reactive-streams'
+}
+
+
 halo {
     version = '2.9.0'
 }
