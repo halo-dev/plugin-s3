@@ -244,10 +244,7 @@ const handleModalClose = () => {
           <div
             class="relative flex flex-col items-start sm:flex-row sm:items-center"
           >
-            <div
-              v-permission="['system:users:aaa']"
-              class="mr-4 hidden items-center sm:flex"
-            >
+            <div class="mr-4 hidden items-center sm:flex">
               <input
                 v-model="checkedAll"
                 class="h-4 w-4 rounded border-gray-300 text-indigo-600"
