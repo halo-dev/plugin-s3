@@ -274,32 +274,32 @@ const handleModalClose = () => {
                 </VButton>
               </VSpace>
             </div>
-              <VSpace spacing="lg" class="flex-wrap">
-                <FilterCleanButton
-                  v-if="selectedLinkedStatusItem != linkedStatusItems[0].value"
-                  @click="selectedLinkedStatusItem = linkedStatusItems[0].value"
-                />
-                <FilterDropdown
-                  v-model="selectedLinkedStatusItem"
-                  :label="$t('core.common.filters.labels.status')"
-                  :items="linkedStatusItems"
-                />
+            <VSpace spacing="lg" class="flex-wrap">
+              <FilterCleanButton
+                v-if="selectedLinkedStatusItem != linkedStatusItems[0].value"
+                @click="selectedLinkedStatusItem = linkedStatusItems[0].value"
+              />
+              <FilterDropdown
+                v-model="selectedLinkedStatusItem"
+                :label="$t('core.common.filters.labels.status')"
+                :items="linkedStatusItems"
+              />
 
-                <div class="flex flex-row gap-2">
-                  <div
-                    class="group cursor-pointer rounded p-1 hover:bg-gray-200"
-                    @click="fetchObjects()"
-                  >
-                    <IconRefreshLine
-                      v-tooltip="$t('core.common.buttons.refresh')"
-                      :class="{
+              <div class="flex flex-row gap-2">
+                <div
+                  class="group cursor-pointer rounded p-1 hover:bg-gray-200"
+                  @click="fetchObjects()"
+                >
+                  <IconRefreshLine
+                    v-tooltip="$t('core.common.buttons.refresh')"
+                    :class="{
                         'animate-spin text-gray-900': isFetching,
                       }"
-                      class="h-4 w-4 text-gray-600 group-hover:text-gray-900"
-                    />
-                  </div>
+                    class="h-4 w-4 text-gray-600 group-hover:text-gray-900"
+                  />
                 </div>
-              </VSpace>
+              </div>
+            </VSpace>
           </div>
         </div>
       </template>
