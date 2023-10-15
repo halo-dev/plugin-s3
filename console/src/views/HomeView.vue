@@ -242,9 +242,9 @@ const handleModalClose = () => {
       <template #header>
         <div class="block w-full bg-gray-50 px-4 py-3">
           <div
-            class="relative flex flex-col items-start sm:flex-row sm:items-center"
+            class="relative flex flex-col flex-wrap items-start gap-4 sm:flex-row sm:items-center"
           >
-            <div class="mr-4 hidden items-center sm:flex">
+            <div class="hidden items-center sm:flex">
               <input
                 v-model="checkedAll"
                 class="h-4 w-4 rounded border-gray-300 text-indigo-600"
@@ -274,8 +274,7 @@ const handleModalClose = () => {
                 </VButton>
               </VSpace>
             </div>
-            <div class="mt-4 flex sm:mt-0">
-              <VSpace spacing="lg">
+              <VSpace spacing="lg" class="flex-wrap">
                 <FilterCleanButton
                   v-if="selectedLinkedStatusItem != linkedStatusItems[0].value"
                   @click="selectedLinkedStatusItem = linkedStatusItems[0].value"
@@ -301,7 +300,6 @@ const handleModalClose = () => {
                   </div>
                 </div>
               </VSpace>
-            </div>
           </div>
         </div>
       </template>
