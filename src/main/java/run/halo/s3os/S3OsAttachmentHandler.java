@@ -283,7 +283,7 @@ public class S3OsAttachmentHandler implements AttachmentHandler {
     Mono<ObjectDetail> upload(UploadContext uploadContext, S3OsProperties properties) {
         return Mono.using(() -> buildS3Client(properties),
             client -> {
-                var uploadState = new UploadState(properties, uploadContext.file().filename());
+                var uploadState = new UploadState(properties, uploadContext.file().filename(), true);
 
                 var content = uploadContext.file().content();
 
@@ -471,12 +471,14 @@ public class S3OsAttachmentHandler implements AttachmentHandler {
         String objectKey;
         boolean needRemoveMapKey = false;
 
-        public UploadState(S3OsProperties properties, String fileName) {
+        public UploadState(S3OsProperties properties, String fileName, boolean needRandomJudge) {
             this.properties = properties;
             this.originalFileName = fileName;
 
-            fileName = FileNameUtils.getRandomFilename(fileName,
+            if (needRandomJudge) {
+                fileName = FileNameUtils.getRandomFilename(fileName,
                     properties.getRandomStringLength(), properties.getRandomFilenameMode());
+            }
 
             this.fileName = fileName;
             this.objectKey = properties.getObjectName(fileName);
