@@ -1,6 +1,6 @@
 import {definePlugin} from "@halo-dev/console-shared";
 import type {PluginTab} from "@halo-dev/console-shared";
-import HomeView from "./views/HomeView.vue";
+import S3Link from "./views/S3Link.vue";
 import {markRaw} from "vue";
 
 export default definePlugin({
@@ -12,8 +12,8 @@ export default definePlugin({
         {
           id: "s3-link",
           label: "关联S3文件",
-          component: markRaw(HomeView),
-          permissions: []
+          component: markRaw(S3Link),
+          permissions: ["plugin:s3os:link"]
         },
       ];
     },
