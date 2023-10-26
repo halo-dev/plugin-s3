@@ -1,6 +1,10 @@
 package run.halo.s3os;
 
+import java.util.List;
+import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.NoArgsConstructor;
+import lombok.RequiredArgsConstructor;
 import org.springframework.util.StringUtils;
 
 import java.time.LocalDate;
@@ -38,6 +42,16 @@ class S3OsProperties {
 
 
     private String region = "Auto";
+
+    private List<urlSuffixItem> urlSuffixes;
+
+    @Data
+    @AllArgsConstructor
+    @NoArgsConstructor
+    public static class urlSuffixItem {
+        private String fileSuffix;
+        private String urlSuffix;
+    }
 
     public String getObjectName(String filename) {
         var objectName = filename;

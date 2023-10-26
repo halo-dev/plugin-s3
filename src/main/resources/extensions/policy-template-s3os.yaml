@@ -100,3 +100,20 @@ spec:
           label: 绑定域名（CDN域名）
           placeholder: 如不设置，那么将使用 Bucket + EndPoint 作为域名
           help: 协议头请在上方设置，此处无需以"http://"或"https://"开头，系统会自动拼接
+        - $formkit: repeater
+          name: urlSuffixes
+          label: 网址后缀
+          help: 用于对指定文件类型的网址添加后缀处理参数，优先级从上到下只取第一个匹配项
+          value: [ ]
+          min: 0
+          children:
+            - $formkit: text
+              name: fileSuffix
+              label: 文件后缀
+              placeholder: 以半角逗号分隔，例如：jpg,jpeg,png,gif
+              validation: required
+            - $formkit: text
+              name: urlSuffix
+              label: 网址后缀
+              placeholder: 例如：?imageMogr2/format/webp
+              validation: required
