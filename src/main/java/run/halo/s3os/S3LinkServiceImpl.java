@@ -184,7 +184,7 @@ public class S3LinkServiceImpl implements S3LinkService {
                     .map(headObjectResponse -> {
                         var objectDetail = new S3OsAttachmentHandler.ObjectDetail(
                                 new S3OsAttachmentHandler.UploadState(properties,
-                                        FileNameUtils.extractFileNameFromS3Key(objectKey)),
+                                        FileNameUtils.extractFileNameFromS3Key(objectKey), false),
                                 headObjectResponse);
                         return handler.buildAttachment(properties, objectDetail);
                     })
