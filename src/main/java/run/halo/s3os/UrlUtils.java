@@ -21,17 +21,15 @@ public class UrlUtils {
 
     public static String findUrlSuffix(List<S3OsProperties.urlSuffixItem> urlSuffixList,
                                        String fileName) {
-        if (StringUtils.isBlank(fileName)) {
+        if (StringUtils.isBlank(fileName) || urlSuffixList == null) {
             return null;
         }
         fileName = fileName.toLowerCase();
-        if (urlSuffixList != null) {
-            for (S3OsProperties.urlSuffixItem item : urlSuffixList) {
-                String[] fileSuffixes = item.getFileSuffix().split(",");
-                for (String suffix : fileSuffixes) {
-                    if (fileName.endsWith("." + suffix.trim().toLowerCase())) {
-                        return item.getUrlSuffix();
-                    }
+        for (S3OsProperties.urlSuffixItem item : urlSuffixList) {
+            String[] fileSuffixes = item.getFileSuffix().split(",");
+            for (String suffix : fileSuffixes) {
+                if (fileName.endsWith("." + suffix.trim().toLowerCase())) {
+                    return item.getUrlSuffix();
                 }
             }
         }
