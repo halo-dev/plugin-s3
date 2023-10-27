@@ -21,7 +21,7 @@ public class UrlUtils {
 
     public static String findUrlSuffix(List<S3OsProperties.urlSuffixItem> urlSuffixList,
                                        String fileName) {
-        if (StringUtils.isBlank(fileName)) {
+        if (StringUtils.isBlank(fileName) || urlSuffixList == null) {
             return null;
         }
         fileName = fileName.toLowerCase();
