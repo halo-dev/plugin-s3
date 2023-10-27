@@ -25,11 +25,13 @@ public class UrlUtils {
             return null;
         }
         fileName = fileName.toLowerCase();
-        for (S3OsProperties.urlSuffixItem item : urlSuffixList) {
-            String[] fileSuffixes = item.getFileSuffix().split(",");
-            for (String suffix : fileSuffixes) {
-                if (fileName.endsWith("." + suffix.trim().toLowerCase())) {
-                    return item.getUrlSuffix();
+        if (urlSuffixList != null) {
+            for (S3OsProperties.urlSuffixItem item : urlSuffixList) {
+                String[] fileSuffixes = item.getFileSuffix().split(",");
+                for (String suffix : fileSuffixes) {
+                    if (fileName.endsWith("." + suffix.trim().toLowerCase())) {
+                        return item.getUrlSuffix();
+                    }
                 }
             }
         }

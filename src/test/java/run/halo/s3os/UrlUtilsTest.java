@@ -46,5 +46,10 @@ class UrlUtilsTest {
         String fileName5 = "";
         String result5 = UrlUtils.findUrlSuffix(urlSuffixList, fileName5);
         assertNull(result5);
+
+        // 测试urlSuffixList为null，期望返回null
+        String fileName6 = "example";
+        String result6 = UrlUtils.findUrlSuffix(null, fileName6);
+        assertNull(result6);
     }
 }
