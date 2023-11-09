@@ -1,13 +1,8 @@
 <script setup lang="ts">
-import { deleteApisS3OsHaloRunV1Alpha1AttachmentsByName } from "@/controller";
-import type { Attachment } from "@/interface";
-import {
-  VDropdownDivider,
-  VDropdownItem,
-  Toast,
-  Dialog,
-} from "@halo-dev/components";
-import { useQueryClient } from "@tanstack/vue-query";
+import {deleteApisS3OsHaloRunV1Alpha1AttachmentsByName} from "@/controller";
+import type {Attachment} from "@/interface";
+import {Dialog, Toast, VDropdownDivider, VDropdownItem} from "@halo-dev/components";
+import {useQueryClient} from "@tanstack/vue-query";
 
 const props = defineProps<{
   attachment: Attachment;
@@ -23,12 +18,12 @@ const handleUnlink = () => {
     cancelText: "取消",
     onConfirm: async () => {
       try {
-        await deleteApisS3OsHaloRunV1Alpha1AttachmentsByName({ name: props.attachment.metadata.name });
+        await deleteApisS3OsHaloRunV1Alpha1AttachmentsByName({name: props.attachment.metadata.name});
         Toast.success("解除关联成功");
       } catch (e) {
         console.error("Failed to delete attachment", e);
       } finally {
-        queryClient.invalidateQueries({ queryKey: ["attachments"] });
+        queryClient.invalidateQueries({queryKey: ["attachments"]});
       }
     },
   });
@@ -36,7 +31,7 @@ const handleUnlink = () => {
 </script>
 <template>
   <div>
-    <VDropdownDivider />
+    <VDropdownDivider/>
     <VDropdownItem type="danger" @click="handleUnlink">解除 S3 关联</VDropdownItem>
   </div>
 </template>
