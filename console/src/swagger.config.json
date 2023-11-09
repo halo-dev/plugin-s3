@@ -1,6 +1,6 @@
 {
   "docsUrl": "http://localhost:8090/v3/api-docs/extension-api",
-  "includeTags": ["s-3-link-controller"],
+  "includeTags": ["s-3-link-controller", "s-3-unlink-controller"],
   "excludeTags": [],
   "axiosInstanceUrl": "@/utils/request",
   "prefix": ""

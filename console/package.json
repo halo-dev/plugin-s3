@@ -11,12 +11,13 @@
     "lint": "eslint . --ext .vue,.js,.jsx,.cjs,.mjs,.ts,.tsx,.cts,.mts --fix --ignore-path .gitignore"
   },
   "dependencies": {
-    "@halo-dev/components": "^1.5.0",
-    "@halo-dev/console-shared": "^2.8.0",
+    "@halo-dev/components": "^1.9.0",
+    "@halo-dev/console-shared": "^2.10.0",
+    "@tanstack/vue-query": "4.29.1",
     "axios": "^1.4.0",
     "canvas-confetti": "^1.6.0",
     "path-browserify": "^1.0.1",
-    "vue": "^3.2.41"
+    "vue": "^3.3.4"
   },
   "devDependencies": {
     "@iconify/json": "^2.2.18",

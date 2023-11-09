@@ -6,6 +6,9 @@ export * from "./apiTypes/ObjectVo";
 export * from "./apiTypes/Policy";
 export * from "./apiTypes/PolicySpec";
 export * from "./apiTypes/S3ListResult";
+export * from "./apiTypes/Attachment";
+export * from "./apiTypes/AttachmentSpec";
+export * from "./apiTypes/AttachmentStatus";
 
 export type Primitive = undefined | null | boolean | string | number | symbol;
 export type DeepRequired<T> = T extends Primitive ? T : keyof T extends never ? T : { [K in keyof T]-?: DeepRequired<T[K]> };

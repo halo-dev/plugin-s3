@@ -21,3 +21,21 @@ rules:
     verbs: [ "get", "list" ]
   - nonResourceURLs: ["/apis/s3os.halo.run/v1alpha1/attachments/link"]
     verbs: [ "create" ]
+---
+apiVersion: v1alpha1
+kind: "Role"
+metadata:
+  name: role-template-s3os-unlink
+  labels:
+    halo.run/role-template: "true"
+  annotations:
+    rbac.authorization.halo.run/dependencies: |
+      [ "role-template-manage-attachments" ]
+    rbac.authorization.halo.run/module: "S3 Attachments Management"
+    rbac.authorization.halo.run/display-name: "S3 UnLink"
+    rbac.authorization.halo.run/ui-permissions: |
+      ["plugin:s3os:unlink"]
+rules:
+  - apiGroups: [ "s3os.halo.run" ]
+    resources: [ "attachments" ]
+    verbs: [ "delete" ]
