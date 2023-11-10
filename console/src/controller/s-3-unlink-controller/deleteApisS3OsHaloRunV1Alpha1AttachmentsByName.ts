@@ -1,5 +1,6 @@
 import request from "@/utils/request";
-import { Attachment, DeepRequired } from "../../interface";
+import { DeepRequired } from "../../interface";
+import { Attachment } from "@halo-dev/api-client";
 
 /**
  * /apis/s3os.halo.run/v1alpha1/attachments/{name}

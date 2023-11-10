@@ -5,6 +5,9 @@ settings:
   excludeLinksFromLockfile: false
 
 dependencies:
+  '@halo-dev/api-client':
+    specifier: ^2.10.0
+    version: 2.10.0
   '@halo-dev/components':
     specifier: ^1.9.0
     version: 1.9.0(vue-router@4.2.5)(vue@3.3.7)

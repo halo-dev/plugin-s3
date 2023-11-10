@@ -1,10 +1,10 @@
+import type {Attachment} from "@halo-dev/api-client";
 import type {PluginTab} from "@halo-dev/console-shared";
 import {definePlugin} from "@halo-dev/console-shared";
 import S3Link from "./views/S3Link.vue";
 import S3Unlink from "./views/S3Unlink.vue"
 import type {Ref} from "vue";
 import {markRaw} from "vue";
-import type {Attachment} from "./interface";
 
 export default definePlugin({
   components: {},

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import {deleteApisS3OsHaloRunV1Alpha1AttachmentsByName} from "@/controller";
-import type {Attachment} from "@/interface";
+import type {Attachment} from "@halo-dev/api-client";
 import {Dialog, Toast, VDropdownDivider, VDropdownItem} from "@halo-dev/components";
 import {useQueryClient} from "@tanstack/vue-query";
 
