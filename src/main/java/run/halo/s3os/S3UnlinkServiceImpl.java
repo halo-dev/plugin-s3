@@ -1,12 +1,12 @@
 package run.halo.s3os;
 
+import java.time.Instant;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ServerWebInputException;
 import reactor.core.publisher.Mono;
 import run.halo.app.core.extension.attachment.Attachment;
-import run.halo.app.core.extension.attachment.Constant;
 import run.halo.app.core.extension.attachment.Policy;
 import run.halo.app.extension.ReactiveExtensionClient;
 
@@ -28,7 +28,8 @@ public class S3UnlinkServiceImpl implements S3UnlinkService {
                     }
                 }).thenReturn(attachment))
             .flatMap(attachment -> {
-                attachment.getMetadata().getFinalizers().remove(Constant.FINALIZER_NAME);
+                attachment.getMetadata().getAnnotations().put(S3OsAttachmentHandler.UNLINK_ANNO_KEY,
+                    Instant.now().toString());
                 return client.update(attachment);
             })
             .flatMap(client::delete);
