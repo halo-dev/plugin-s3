@@ -67,7 +67,7 @@ public class S3OsAttachmentHandler implements AttachmentHandler {
 
     public static final String OBJECT_KEY = "s3os.plugin.halo.run/object-key";
     public static final String URL_SUFFIX_ANNO_KEY = "s3os.plugin.halo.run/url-suffix";
-    public static final String UNLINK_ANNO_KEY = "s3os.plugin.halo.run/skip-remote-deletion";
+    public static final String SKIP_REMOTE_DELETION_ANNO = "s3os.plugin.halo.run/skip-remote-deletion";
     public static final int MULTIPART_MIN_PART_SIZE = 5 * 1024 * 1024;
 
     /**
@@ -92,7 +92,7 @@ public class S3OsAttachmentHandler implements AttachmentHandler {
             .flatMap(context -> {
                 var objectKey = getObjectKey(context.attachment());
                 if (objectKey == null || MetadataUtil.nullSafeAnnotations(context.attachment())
-                    .containsKey(UNLINK_ANNO_KEY)) {
+                    .containsKey(SKIP_REMOTE_DELETION_ANNO)) {
                     return Mono.just(context);
                 }
                 var properties = getProperties(deleteContext.configMap());
