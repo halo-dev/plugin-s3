@@ -66,7 +66,7 @@ public class S3OsAttachmentHandler implements AttachmentHandler {
 
     public static final String OBJECT_KEY = "s3os.plugin.halo.run/object-key";
     public static final String URL_SUFFIX_ANNO_KEY = "s3os.plugin.halo.run/url-suffix";
-    public static final String UNLINK_ANNO_KEY = "s3os.plugin.halo.run/unlink";
+    public static final String UNLINK_ANNO_KEY = "s3os.plugin.halo.run/skip-remote-deletion";
     public static final int MULTIPART_MIN_PART_SIZE = 5 * 1024 * 1024;
 
     /**
