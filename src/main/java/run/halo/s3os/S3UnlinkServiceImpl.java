@@ -29,10 +29,9 @@ public class S3UnlinkServiceImpl implements S3UnlinkService {
                 }).thenReturn(attachment))
             .flatMap(attachment -> {
                 attachment.getMetadata().getAnnotations().put(
-                    S3OsAttachmentHandler.SKIP_REMOTE_DELETION_ANNO, Instant.now().toString());
-                return client.update(attachment);
-            })
-            .flatMap(client::delete);
+                    S3OsAttachmentHandler.SKIP_REMOTE_DELETION_ANNO, Boolean.TRUE.toString());
+                return client.delete(attachment);
+            });
     }
 
 }
