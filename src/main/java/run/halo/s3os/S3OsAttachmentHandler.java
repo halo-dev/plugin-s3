@@ -37,6 +37,7 @@ import run.halo.app.core.extension.attachment.Policy;
 import run.halo.app.core.extension.attachment.endpoint.AttachmentHandler;
 import run.halo.app.extension.ConfigMap;
 import run.halo.app.extension.Metadata;
+import run.halo.app.extension.MetadataUtil;
 import run.halo.app.infra.utils.JsonUtils;
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
 import software.amazon.awssdk.awscore.presigner.SdkPresigner;
@@ -90,7 +91,7 @@ public class S3OsAttachmentHandler implements AttachmentHandler {
         return Mono.just(deleteContext).filter(context -> this.shouldHandle(context.policy()))
             .flatMap(context -> {
                 var objectKey = getObjectKey(context.attachment());
-                if (objectKey == null || context.attachment().getMetadata().getAnnotations()
+                if (objectKey == null || MetadataUtil.nullSafeAnnotations(context.attachment())
                     .containsKey(UNLINK_ANNO_KEY)) {
                     return Mono.just(context);
                 }
