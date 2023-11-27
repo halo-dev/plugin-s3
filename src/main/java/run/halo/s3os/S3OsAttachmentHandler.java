@@ -37,6 +37,7 @@ import run.halo.app.core.extension.attachment.Policy;
 import run.halo.app.core.extension.attachment.endpoint.AttachmentHandler;
 import run.halo.app.extension.ConfigMap;
 import run.halo.app.extension.Metadata;
+import run.halo.app.extension.MetadataUtil;
 import run.halo.app.infra.utils.JsonUtils;
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
 import software.amazon.awssdk.awscore.presigner.SdkPresigner;
@@ -66,6 +67,7 @@ public class S3OsAttachmentHandler implements AttachmentHandler {
 
     public static final String OBJECT_KEY = "s3os.plugin.halo.run/object-key";
     public static final String URL_SUFFIX_ANNO_KEY = "s3os.plugin.halo.run/url-suffix";
+    public static final String SKIP_REMOTE_DELETION_ANNO = "s3os.plugin.halo.run/skip-remote-deletion";
     public static final int MULTIPART_MIN_PART_SIZE = 5 * 1024 * 1024;
 
     /**
@@ -89,7 +91,8 @@ public class S3OsAttachmentHandler implements AttachmentHandler {
         return Mono.just(deleteContext).filter(context -> this.shouldHandle(context.policy()))
             .flatMap(context -> {
                 var objectKey = getObjectKey(context.attachment());
-                if (objectKey == null) {
+                if (objectKey == null || MetadataUtil.nullSafeAnnotations(context.attachment())
+                    .containsKey(SKIP_REMOTE_DELETION_ANNO)) {
                     return Mono.just(context);
                 }
                 var properties = getProperties(deleteContext.configMap());
