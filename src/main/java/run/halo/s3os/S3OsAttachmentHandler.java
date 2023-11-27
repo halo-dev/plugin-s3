@@ -91,8 +91,14 @@ public class S3OsAttachmentHandler implements AttachmentHandler {
         return Mono.just(deleteContext).filter(context -> this.shouldHandle(context.policy()))
             .flatMap(context -> {
                 var objectKey = getObjectKey(context.attachment());
-                if (objectKey == null || MetadataUtil.nullSafeAnnotations(context.attachment())
+                if (objectKey == null) {
+                    log.warn(
+                        "Cannot obtain object key from attachment {}, skip deleting object from S3.",
+                        context.attachment().getMetadata().getName());
+                    return Mono.just(context);
+                } else if (MetadataUtil.nullSafeAnnotations(context.attachment())
                     .containsKey(SKIP_REMOTE_DELETION_ANNO)) {
+                    log.info("Skip deleting object {} from S3.", objectKey);
                     return Mono.just(context);
                 }
                 var properties = getProperties(deleteContext.configMap());
