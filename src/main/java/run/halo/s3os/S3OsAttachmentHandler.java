@@ -216,8 +216,7 @@ public class S3OsAttachmentHandler implements AttachmentHandler {
         var attachment = new Attachment();
         attachment.setMetadata(metadata);
         attachment.setSpec(spec);
-        log.info("Upload object {} to bucket {} successfully", objectDetail.uploadState.objectKey,
-            properties.getBucket());
+        log.info("Build attachment {} successfully", objectDetail.uploadState.objectKey);
         return attachment;
     }
 
@@ -368,6 +367,8 @@ public class S3OsAttachmentHandler implements AttachmentHandler {
                     // build object detail
                     .map((response) -> {
                         checkResult(response, "getMetadata");
+                        log.info("Upload object {} to bucket {} successfully",
+                            uploadState.objectKey, properties.getBucket());
                         return new ObjectDetail(uploadState, response);
                     })
                     // close client
