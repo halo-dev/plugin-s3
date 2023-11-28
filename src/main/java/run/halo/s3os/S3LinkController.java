@@ -32,7 +32,7 @@ public class S3LinkController {
     }
 
     @GetMapping("/objects/{policyName}")
-    public Mono<S3ListResult> listObjects(@PathVariable String policyName,
+    public Mono<S3ListResult> listObjects(@PathVariable(value = "policyName") String policyName,
         @RequestParam(name = "continuationToken", required = false) String continuationToken,
         @RequestParam(name = "continuationObject", required = false) String continuationObject,
         @RequestParam(name = "pageSize") Integer pageSize,
