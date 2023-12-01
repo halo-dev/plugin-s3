@@ -222,7 +222,7 @@ public class S3OsAttachmentHandler implements AttachmentHandler {
         var attachment = new Attachment();
         attachment.setMetadata(metadata);
         attachment.setSpec(spec);
-        log.info("Build attachment {} successfully", objectDetail.uploadState.objectKey);
+        log.info("Built attachment {} successfully", objectDetail.uploadState.objectKey);
         return attachment;
     }
 
