@@ -373,7 +373,7 @@ public class S3OsAttachmentHandler implements AttachmentHandler {
                     // build object detail
                     .map((response) -> {
                         checkResult(response, "getMetadata");
-                        log.info("Upload object {} to bucket {} successfully",
+                        log.info("Uploaded object {} to bucket {} successfully",
                             uploadState.objectKey, properties.getBucket());
                         return new ObjectDetail(uploadState, response);
                     })
