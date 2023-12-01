@@ -20,7 +20,10 @@ dependencies {
     compileOnly 'run.halo.app:api'
 
     implementation platform('software.amazon.awssdk:bom:2.19.8')
-    implementation 'software.amazon.awssdk:s3'
+    implementation ('software.amazon.awssdk:s3') {
+        exclude group: 'org.slf4j'
+        exclude group: 'commons-logging'
+    }
 
     testImplementation 'run.halo.app:api'
     testImplementation 'org.springframework.boot:spring-boot-starter-test'

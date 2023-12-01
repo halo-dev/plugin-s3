@@ -91,8 +91,14 @@ public class S3OsAttachmentHandler implements AttachmentHandler {
         return Mono.just(deleteContext).filter(context -> this.shouldHandle(context.policy()))
             .flatMap(context -> {
                 var objectKey = getObjectKey(context.attachment());
-                if (objectKey == null || MetadataUtil.nullSafeAnnotations(context.attachment())
+                if (objectKey == null) {
+                    log.warn(
+                        "Cannot obtain object key from attachment {}, skip deleting object from S3.",
+                        context.attachment().getMetadata().getName());
+                    return Mono.just(context);
+                } else if (MetadataUtil.nullSafeAnnotations(context.attachment())
                     .containsKey(SKIP_REMOTE_DELETION_ANNO)) {
+                    log.info("Skip deleting object {} from S3.", objectKey);
                     return Mono.just(context);
                 }
                 var properties = getProperties(deleteContext.configMap());
@@ -216,8 +222,7 @@ public class S3OsAttachmentHandler implements AttachmentHandler {
         var attachment = new Attachment();
         attachment.setMetadata(metadata);
         attachment.setSpec(spec);
-        log.info("Upload object {} to bucket {} successfully", objectDetail.uploadState.objectKey,
-            properties.getBucket());
+        log.info("Built attachment {} successfully", objectDetail.uploadState.objectKey);
         return attachment;
     }
 
@@ -368,6 +373,8 @@ public class S3OsAttachmentHandler implements AttachmentHandler {
                     // build object detail
                     .map((response) -> {
                         checkResult(response, "getMetadata");
+                        log.info("Uploaded object {} to bucket {} successfully",
+                            uploadState.objectKey, properties.getBucket());
                         return new ObjectDetail(uploadState, response);
                     })
                     // close client
