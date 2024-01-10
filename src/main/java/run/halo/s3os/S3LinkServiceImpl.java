@@ -1,5 +1,13 @@
 package run.halo.s3os;
 
+import static run.halo.s3os.S3OsAttachmentHandler.OBJECT_KEY;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
@@ -9,37 +17,17 @@ import org.springframework.security.core.context.ReactiveSecurityContextHolder;
 import org.springframework.security.core.context.SecurityContext;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
-import org.springframework.web.util.UriUtils;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 import run.halo.app.core.extension.attachment.Attachment;
-import run.halo.app.core.extension.attachment.Constant;
 import run.halo.app.core.extension.attachment.Policy;
 import run.halo.app.extension.ConfigMap;
-import run.halo.app.extension.Metadata;
 import run.halo.app.extension.ReactiveExtensionClient;
-import run.halo.app.infra.utils.JsonUtils;
-import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
-import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3Client;
-import software.amazon.awssdk.services.s3.S3Configuration;
 import software.amazon.awssdk.services.s3.model.HeadObjectRequest;
 import software.amazon.awssdk.services.s3.model.ListObjectsV2Request;
 import software.amazon.awssdk.services.s3.model.S3Object;
-
-import java.net.URI;
-import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicReference;
-import java.util.function.Function;
-import java.util.stream.Collectors;
-
-import static run.halo.s3os.S3OsAttachmentHandler.OBJECT_KEY;
 
 
 @Service
@@ -103,7 +91,8 @@ public class S3LinkServiceImpl implements S3LinkService {
                                 listObjectsV2Response.nextContinuationToken(),
                                 listObjectsV2Response.isTruncated()));
                     });
-            });
+            })
+            .onErrorMap(S3ExceptionHandler.handler);
     }
 
     @Override
@@ -155,7 +144,8 @@ public class S3LinkServiceImpl implements S3LinkService {
                             .getKey() : null, tokenState.currToken,
                         limitedObjects.size() == pageSize);
                 });
-        });
+        })
+        .onErrorMap(S3ExceptionHandler.handler);
     }
 
     record TokenState(String currToken, String nextToken) {
@@ -200,6 +190,7 @@ public class S3LinkServiceImpl implements S3LinkService {
                     .flatMap(client::create)
                     .thenReturn(new LinkResult.LinkResultItem(objectKey, true, null));
             }))
+            .onErrorMap(S3ExceptionHandler.handler)
             .onErrorResume(throwable ->
                 Mono.just(new LinkResult.LinkResultItem(objectKey, false, throwable.getMessage())));
     }
