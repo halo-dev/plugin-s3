@@ -82,7 +82,8 @@ public class S3OsAttachmentHandler implements AttachmentHandler {
                 final var properties = getProperties(context.configMap());
                 return upload(context, properties)
                     .subscribeOn(Schedulers.boundedElastic())
-                    .map(objectDetail -> this.buildAttachment(properties, objectDetail));
+                    .map(objectDetail -> this.buildAttachment(properties, objectDetail))
+                    .onErrorMap(S3ExceptionHandler::map);
             });
     }
 
@@ -116,6 +117,7 @@ public class S3OsAttachmentHandler implements AttachmentHandler {
                     })
                     .thenReturn(context);
             })
+            .onErrorMap(S3ExceptionHandler::map)
             .map(DeleteContext::attachment);
     }
 
@@ -152,7 +154,8 @@ public class S3OsAttachmentHandler implements AttachmentHandler {
                     }
                 },
                 SdkPresigner::close)
-            .subscribeOn(Schedulers.boundedElastic());
+            .subscribeOn(Schedulers.boundedElastic())
+            .onErrorMap(S3ExceptionHandler::map);
     }
 
     @Override
