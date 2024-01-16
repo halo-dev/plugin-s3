@@ -92,7 +92,7 @@ public class S3LinkServiceImpl implements S3LinkService {
                                 listObjectsV2Response.isTruncated()));
                     });
             })
-            .onErrorMap(S3ExceptionHandler.handler);
+            .onErrorMap(S3ExceptionHandler::map);
     }
 
     @Override
@@ -145,7 +145,7 @@ public class S3LinkServiceImpl implements S3LinkService {
                         limitedObjects.size() == pageSize);
                 });
         })
-        .onErrorMap(S3ExceptionHandler.handler);
+        .onErrorMap(S3ExceptionHandler::map);
     }
 
     record TokenState(String currToken, String nextToken) {
@@ -190,7 +190,7 @@ public class S3LinkServiceImpl implements S3LinkService {
                     .flatMap(client::create)
                     .thenReturn(new LinkResult.LinkResultItem(objectKey, true, null));
             }))
-            .onErrorMap(S3ExceptionHandler.handler)
+            .onErrorMap(S3ExceptionHandler::map)
             .onErrorResume(throwable ->
                 Mono.just(new LinkResult.LinkResultItem(objectKey, false, throwable.getMessage())));
     }
