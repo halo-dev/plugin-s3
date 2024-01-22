@@ -62,30 +62,52 @@ spec:
           name: location
           label: 上传目录
           placeholder: 如不填写，则默认上传到根目录
-          help: 支持使用 ${year} ${month} ${day} 占位符
+          help: 支持的占位符请查阅：https://github.com/halo-dev/plugin-s3#%E4%B8%8A%E4%BC%A0%E7%9B%AE%E5%BD%95
         - $formkit: select
           name: randomFilenameMode
           label: 上传时重命名文件方式
           options:
             - label: 保留原文件名
               value: none
-            - label: 使用原文件名 + 随机字符串
-              value: withString
-            - label: 使用日期 + 随机字符串
-              value: dateWithString
-            - label: 使用日期时间 + 随机字符串
-              value: datetimeWithString
-            - label: 使用随机字符串
-              value: string
+            - label: 自定义（请在下方输入自定义模板）
+              value: custom
             - label: 使用UUID
               value: uuid
+            - label: 使用毫秒时间戳
+              value: timestampMs
+            - label: 使用原文件名 + 随机字母
+              value: withString
+            - label: 使用日期 + 随机字母
+              value: dateWithString
+            - label: 使用日期时间 + 随机字母
+              value: datetimeWithString
+            - label: 使用随机字母
+              value: string
           validation: required
         - $formkit: number
           name: randomStringLength
-          label: 随机字符串长度
+          label: 随机字母长度
           min: 4
           max: 16
-          placeholder: 仅在重命名文件时需要随机字符串时填写(支持4~16位, 默认为8位)
+          if: "$randomFilenameMode == 'dateWithString' || $randomFilenameMode == 'datetimeWithString' || $randomFilenameMode == 'withString' || $randomFilenameMode == 'string'"
+          help: 支持4~16位, 默认为8位
+        - $formkit: text
+          name: customTemplate
+          label: 自定义文件名模板
+          if: "$randomFilenameMode == 'custom'"
+          value: "${origin-filename}"
+          help: 支持的占位符请查阅：https://github.com/halo-dev/plugin-s3#%E4%B8%8A%E4%BC%A0%E6%97%B6%E9%87%8D%E5%91%BD%E5%90%8D%E6%96%87%E4%BB%B6%E6%96%B9%E5%BC%8F
+        - $formkit: select
+          name: duplicateFilenameHandling
+          label: 重复文件名处理方式
+          options:
+            - label: 加随机字母数字后缀
+              value: randomAlphanumeric
+            - label: 加随机字母后缀
+              value: randomAlphabetic
+            - label: 报错不上传
+              value: exception
+          validation: required
         - $formkit: select
           name: protocol
           label: 绑定域名协议

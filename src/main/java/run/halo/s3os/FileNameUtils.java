@@ -1,95 +1,122 @@
 package run.halo.s3os;
 
+import static run.halo.s3os.S3OsProperties.DuplicateFilenameHandling;
+import static run.halo.s3os.S3OsProperties.RandomFilenameMode;
+
 import com.google.common.io.Files;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.commons.lang3.StringUtils;
-
-import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.util.UUID;
+import org.springframework.web.server.ServerWebInputException;
 
 public final class FileNameUtils {
 
     private FileNameUtils() {
     }
 
-    public static String removeFileExtension(String filename, boolean removeAllExtensions) {
-        if (filename == null || filename.isEmpty()) {
-            return filename;
-        }
-        var extPattern = "(?<!^)[.]" + (removeAllExtensions ? ".*" : "[^.]*$");
-        return filename.replaceAll(extPattern, "");
-    }
-
-    public static String getRandomFilename(String filename, Integer length, String mode) {
-        return switch (mode) {
-//            case "none" -> filename;
-            case "withString" -> randomFilenameWithString(filename, length);
-            case "dateWithString" -> randomDateWithString(filename, length);
-            case "datetimeWithString" -> randomDatetimeWithString(filename, length);
-            case "string" -> randomString(filename, length);
-            case "uuid" -> randomUuid(filename);
-            default -> filename;
-        };
+    /**
+     * Replace placeholders in filename. No duplicate handling.
+     * @param filename filename
+     * @param mode random filename mode
+     * @param randomStringLength random string length,when mode is withString or string
+     * @param customTemplate custom template,when mode is custom
+     * @return replaced filename
+     */
+    public static String replaceFilename(String filename, RandomFilenameMode mode,
+                                         Integer randomStringLength, String customTemplate) {
+        var extension = Files.getFileExtension(filename);
+        var filenameWithoutExtension = Files.getNameWithoutExtension(filename);
+        var replaced = replaceFilenameByMode(filenameWithoutExtension, mode, randomStringLength,
+            customTemplate);
+        return replaced + (StringUtils.isBlank(extension) ? "" : "." + extension);
     }
 
     /**
-     * Append random string after file name.
-     * <pre>
-     * Case 1: halo.run -> halo-xyz.run
-     * Case 2: .run -> xyz.run
-     * Case 3: halo -> halo-xyz
-     * </pre>
-     *
-     * @param filename is name of file.
-     * @param length   is for generating random string with specific length.
-     * @return File name with random string.
+     * Replace placeholders in filename with duplicate handling.
+     * @param filename filename
+     * @param mode random filename mode
+     * @param randomStringLength random string length,when mode is withString or string
+     * @param customTemplate custom template,when mode is custom
+     * @param handling duplicate filename handling
+     * @return replaced filename
      */
-    public static String randomFilenameWithString(String filename, Integer length) {
-        String random = RandomStringUtils.randomAlphabetic(length).toLowerCase();
-        return randomFilename(filename, random, true);
+    public static String replaceFilenameWithDuplicateHandling(String filename,
+                                                              RandomFilenameMode mode,
+                                                              Integer randomStringLength,
+                                                              String customTemplate,
+                                                              DuplicateFilenameHandling handling) {
+        var extension = Files.getFileExtension(filename);
+        var filenameWithoutExtension = Files.getNameWithoutExtension(filename);
+        var replaced =
+            replaceFilenameByMode(filenameWithoutExtension, mode, randomStringLength,
+                customTemplate);
+        var suffix = getDuplicateFilenameSuffix(handling);
+        return replaced + "-" + suffix + (StringUtils.isBlank(extension) ? "" : "." + extension);
     }
 
-    private static String randomDateWithString(String filename, Integer length) {
-        String random = LocalDate.now() + "-" + RandomStringUtils.randomAlphabetic(length).toLowerCase();
-        return randomFilename(filename, random, false);
-    }
-
-    private static String randomDatetimeWithString(String filename, Integer length) {
-        String random = LocalDateTime.now() + "-" + RandomStringUtils.randomAlphabetic(length).toLowerCase();
-        return randomFilename(filename, random, false);
-    }
-
-    private static String randomString(String filename, Integer length) {
-        String random = RandomStringUtils.randomAlphabetic(length).toLowerCase();
-        return randomFilename(filename, random, false);
-    }
-
-    private static String randomUuid(String filename) {
-        String random = UUID.randomUUID().toString().toUpperCase();
-        return randomFilename(filename, random, false);
-    }
-
-    private static String randomFilename(String filename, String random, Boolean needOriginalName) {
-        String nameWithoutExtension = Files.getNameWithoutExtension(filename);
-        String extension = Files.getFileExtension(filename);
-        boolean nameIsEmpty = StringUtils.isBlank(nameWithoutExtension);
-        boolean extensionIsEmpty = StringUtils.isBlank(extension);
-        if (needOriginalName) {
-            if (nameIsEmpty) {
-                return random + "." + extension;
-            }
-            if (extensionIsEmpty) {
-                return nameWithoutExtension + "-" + random;
-            }
-            return nameWithoutExtension + "-" + random + "." + extension;
+    private static String getDuplicateFilenameSuffix(
+        S3OsProperties.DuplicateFilenameHandling duplicateFilenameHandling) {
+        if (duplicateFilenameHandling == null) {
+            return RandomStringUtils.randomAlphabetic(4).toLowerCase();
         }
-        else {
-            if (extensionIsEmpty) {
-                return random;
-            }
-            return random + "." + extension;
+        return switch (duplicateFilenameHandling) {
+            case randomAlphabetic -> RandomStringUtils.randomAlphabetic(4).toLowerCase();
+            case exception -> throw new ServerWebInputException("Duplicate filename");
+            // include "randomAlphanumeric" mode
+            default -> RandomStringUtils.randomAlphanumeric(4).toLowerCase();
+        };
+    }
+
+    private static String replaceFilenameByMode(String filenameWithoutExtension,
+                                                S3OsProperties.RandomFilenameMode mode,
+                                                Integer randomStringLength,
+                                                String customTemplate) {
+        if (mode == null) {
+            return filenameWithoutExtension;
         }
+        // default length is 8
+        Integer length = randomStringLength == null ? 8 : randomStringLength;
+
+        return switch (mode) {
+            case custom -> {
+                if (StringUtils.isBlank(customTemplate)) {
+                    yield filenameWithoutExtension;
+                }
+                yield PlaceholderReplacer.replacePlaceholders(customTemplate,
+                    filenameWithoutExtension);
+            }
+            case uuid -> PlaceholderReplacer.replacePlaceholders("${uuid-with-dash}",
+                filenameWithoutExtension);
+            case timestampMs -> PlaceholderReplacer.replacePlaceholders("${timestamp-ms}",
+                filenameWithoutExtension);
+            case dateWithString -> {
+                String dateWithStringTemplate =
+                    String.format("${year}-${month}-${day}-${random-alphabetic:%d}", length);
+                yield PlaceholderReplacer.replacePlaceholders(dateWithStringTemplate,
+                    filenameWithoutExtension);
+            }
+            case datetimeWithString -> {
+                String datetimeWithStringTemplate = String.format(
+                    "${year}-${month}-${day}T${hour}:${minute}:${second}-${random-alphabetic:%d}",
+                    length);
+                yield PlaceholderReplacer.replacePlaceholders(datetimeWithStringTemplate,
+                    filenameWithoutExtension);
+            }
+            case withString -> {
+                String withStringTemplate =
+                    String.format("${origin-filename}-${random-alphabetic:%d}", length);
+                yield PlaceholderReplacer.replacePlaceholders(withStringTemplate,
+                    filenameWithoutExtension);
+            }
+            case string -> {
+                String stringTemplate = String.format("${random-alphabetic:%d}", length);
+                yield PlaceholderReplacer.replacePlaceholders(stringTemplate,
+                    filenameWithoutExtension);
+            }
+            default ->
+                // include "none" mode
+                filenameWithoutExtension;
+        };
+
     }
 
     /**
