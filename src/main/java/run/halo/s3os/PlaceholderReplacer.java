@@ -177,7 +177,7 @@ public class PlaceholderReplacer {
                                               Map<String, String> reusableParams) {
         String[] parts = placeholderWithParam.split(":");
         String placeholder = parts[0];
-        // 复制数组，去掉第一个元素
+
         String[] placeholderParams;
         if (parts.length > 1) {
             placeholderParams = new String[parts.length - 1];
