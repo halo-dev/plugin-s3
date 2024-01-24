@@ -32,6 +32,12 @@ public final class FileNameUtils {
 
     /**
      * Replace placeholders in filename with duplicate handling.
+     * <pre>
+     * Case 1: halo.run -> halo-xyz.run
+     * Case 2: .run -> xyz.run
+     * Case 3: halo -> halo-xyz
+     * </pre>
+     *
      * @param filename filename
      * @param mode random filename mode
      * @param randomStringLength random string length,when mode is withString or string
@@ -50,7 +56,7 @@ public final class FileNameUtils {
             replaceFilenameByMode(filenameWithoutExtension, mode, randomStringLength,
                 customTemplate);
         var suffix = getDuplicateFilenameSuffix(handling);
-        return replaced + "-" + suffix + (StringUtils.isBlank(extension) ? "" : "." + extension);
+        return replaced + (StringUtils.isBlank(replaced) ? "" : "-") + suffix + (StringUtils.isBlank(extension) ? "" : "." + extension);
     }
 
     private static String getDuplicateFilenameSuffix(
