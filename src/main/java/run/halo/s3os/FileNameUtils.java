@@ -15,6 +15,7 @@ public final class FileNameUtils {
 
     /**
      * Replace placeholders in filename. No duplicate handling.
+     *
      * @param filename filename
      * @param mode random filename mode
      * @param randomStringLength random string length,when mode is withString or string
@@ -56,7 +57,8 @@ public final class FileNameUtils {
             replaceFilenameByMode(filenameWithoutExtension, mode, randomStringLength,
                 customTemplate);
         var suffix = getDuplicateFilenameSuffix(handling);
-        return replaced + (StringUtils.isBlank(replaced) ? "" : "-") + suffix + (StringUtils.isBlank(extension) ? "" : "." + extension);
+        return replaced + (StringUtils.isBlank(replaced) ? "" : "-") + suffix
+            + (StringUtils.isBlank(extension) ? "" : "." + extension);
     }
 
     private static String getDuplicateFilenameSuffix(
