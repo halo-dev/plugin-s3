@@ -11,9 +11,9 @@
     "lint": "eslint . --ext .vue,.js,.jsx,.cjs,.mjs,.ts,.tsx,.cts,.mts --fix --ignore-path .gitignore"
   },
   "dependencies": {
-    "@halo-dev/api-client": "^2.10.0",
-    "@halo-dev/components": "^1.9.0",
-    "@halo-dev/console-shared": "^2.10.0",
+    "@halo-dev/api-client": "^2.11.0",
+    "@halo-dev/components": "^1.10.0",
+    "@halo-dev/console-shared": "^2.11.0",
     "@tanstack/vue-query": "4.29.1",
     "axios": "^1.4.0",
     "canvas-confetti": "^1.6.0",
