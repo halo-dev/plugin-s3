@@ -6,14 +6,14 @@ settings:
 
 dependencies:
   '@halo-dev/api-client':
-    specifier: ^2.10.0
-    version: 2.10.0
+    specifier: ^2.11.0
+    version: 2.11.0
   '@halo-dev/components':
-    specifier: ^1.9.0
-    version: 1.9.0(vue-router@4.2.5)(vue@3.3.7)
+    specifier: ^1.10.0
+    version: 1.10.0(vue-router@4.2.5)(vue@3.3.7)
   '@halo-dev/console-shared':
-    specifier: ^2.10.0
-    version: 2.10.0(vue-router@4.2.5)(vue@3.3.7)
+    specifier: ^2.11.0
+    version: 2.11.0(vue-router@4.2.5)(vue@3.3.7)
   '@tanstack/vue-query':
     specifier: 4.29.1
     version: 4.29.1(vue@3.3.7)
@@ -554,12 +554,12 @@ packages:
     resolution: {integrity: sha512-OfX7E2oUDYxtBvsuS4e/jSn4Q9Qb6DzgeYtsAdkPZ47znpoNsMgZw0+tVijiv3uGNR6dgNlty6r9rzIzHjtd/A==}
     dev: false
 
-  /@halo-dev/api-client@2.10.0:
-    resolution: {integrity: sha512-c1fgp+xzE1gQ7O36miWU2Oz+Uh1G4Hqs3clxLSxBD7vuvktgndZGZblNDi5morHB9UkiauAIQP0+PH9L9jwBfA==}
+  /@halo-dev/api-client@2.11.0:
+    resolution: {integrity: sha512-i3PFETsPdHYnTgk3jORu00t43/rCesmqpdZg38/Hq2AdgxhPkE7rghYGdoZRLdanvVC0HM1Axn18Zd7kdizxVA==}
     dev: false
 
-  /@halo-dev/components@1.9.0(vue-router@4.2.5)(vue@3.3.7):
-    resolution: {integrity: sha512-Rc6zK7Uno+kLqvmZkv/NIv1EUVcFzS5FR7s0ai3LHbwybFF2BNul9HEEslS3Z5a9C0M0arnvkjpUlyBmrWbfRQ==}
+  /@halo-dev/components@1.10.0(vue-router@4.2.5)(vue@3.3.7):
+    resolution: {integrity: sha512-Qg7JEkuVyTAqTjuLJHQifhMGl180yZTOX2cSueAssFCuyGZtVCcN/o5FmDtrcw8UXoV8vRwxvpixgjxFwlf/4Q==}
     peerDependencies:
       vue: ^3.3.4
       vue-router: ^4.2.4
@@ -571,13 +571,13 @@ packages:
       - '@nuxt/kit'
     dev: false
 
-  /@halo-dev/console-shared@2.10.0(vue-router@4.2.5)(vue@3.3.7):
-    resolution: {integrity: sha512-c1Ol/xIU2DZk1MWhxtuk1csD90DPvCLByQyGenLgLPX1kVe6QCodWgPG4Uz0WOE1s+rZ2W6XDV0DBXrIHCYBxg==}
+  /@halo-dev/console-shared@2.11.0(vue-router@4.2.5)(vue@3.3.7):
+    resolution: {integrity: sha512-XDyoHsueVgQOvMTDm4Fx3qKzCjXd7bI9eC0DFuw3w85Y3LQeHgrJfbXRlMRCTTZhe3kgpBOra4JjByyFFWa/Cw==}
     peerDependencies:
       vue: ^3.3.4
       vue-router: ^4.2.4
     dependencies:
-      '@halo-dev/api-client': 2.10.0
+      '@halo-dev/api-client': 2.11.0
       vue: 3.3.7(typescript@4.7.4)
       vue-router: 4.2.5(vue@3.3.7)
     dev: false
