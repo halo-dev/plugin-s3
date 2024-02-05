@@ -119,7 +119,7 @@
 * `${millisecond}`：毫秒（三位数）
 * `${random-alphabetic:X}`：随机的小写英文字母，长度为`X`，例如`${random-alphabetic:5}`会生成`abcde`。
 * `${random-num:X}`：随机的数字，长度为`X`，例如`${random-num:5}`会生成`12345`。
-* `${random-alphanumeric:X}`：随机的小写英文字母和数字，长度为`X`，例如`${random-alphanumeric:5}`会生成`abcde12345`。
+* `${random-alphanumeric:X}`：随机的小写英文字母和数字，长度为`X`，例如`${random-alphanumeric:5}`会生成`abc12`。
 
 > **示例**：<br/>
 > 当原始文件名为`image.png`时<br/>
