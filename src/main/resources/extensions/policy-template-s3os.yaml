@@ -86,6 +86,7 @@ spec:
           validation: required
         - $formkit: number
           name: randomStringLength
+          key: randomStringLength
           label: 随机字母长度
           min: 4
           max: 16
@@ -93,6 +94,7 @@ spec:
           help: 支持4~16位, 默认为8位
         - $formkit: text
           name: customTemplate
+          key: customTemplate
           label: 自定义文件名模板
           if: "$randomFilenameMode == 'custom'"
           value: "${origin-filename}"
