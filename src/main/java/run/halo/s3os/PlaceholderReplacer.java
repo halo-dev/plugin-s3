@@ -50,7 +50,7 @@ public class PlaceholderReplacer {
     private static String generateRandomAlphanumeric(String[] placeholderParams) {
         try {
             int length = Integer.parseInt(placeholderParams[0]);
-            return RandomStringUtils.randomAlphanumeric(length).toLowerCase();
+            return RandomStringUtils.randomAlphanumeric(length > 0 ? length : 8).toLowerCase();
         } catch (NumberFormatException | ArrayIndexOutOfBoundsException e) {
             return RandomStringUtils.randomAlphanumeric(8).toLowerCase();
         }
@@ -59,7 +59,7 @@ public class PlaceholderReplacer {
     private static String generateRandomNumber(String[] placeholderParams) {
         try {
             int length = Integer.parseInt(placeholderParams[0]);
-            return RandomStringUtils.randomNumeric(length);
+            return RandomStringUtils.randomNumeric(length > 0 ? length : 8);
         } catch (NumberFormatException | ArrayIndexOutOfBoundsException e) {
             return RandomStringUtils.randomNumeric(8);
         }
@@ -121,7 +121,7 @@ public class PlaceholderReplacer {
     private static String generateRandomLetter(String[] placeholderParams) {
         try {
             int length = Integer.parseInt(placeholderParams[0]);
-            return RandomStringUtils.randomAlphabetic(length).toLowerCase();
+            return RandomStringUtils.randomAlphabetic(length > 0 ? length : 8).toLowerCase();
         } catch (NumberFormatException | ArrayIndexOutOfBoundsException e) {
             return RandomStringUtils.randomAlphabetic(8).toLowerCase();
         }
@@ -135,6 +135,13 @@ public class PlaceholderReplacer {
         return UUID.randomUUID().toString().toUpperCase();
     }
 
+    /**
+     * Replace placeholders in the template with the provided filename.
+     *
+     * @param template The template to replace
+     * @param filename The filename without extension
+     * @return The replaced string
+     */
     public static String replacePlaceholders(String template, String filename) {
         if (StringUtils.isBlank(template)) {
             return filename;
