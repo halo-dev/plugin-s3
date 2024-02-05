@@ -31,6 +31,9 @@ dependencies:
     version: 3.3.7(typescript@4.7.4)
 
 devDependencies:
+  '@halo-dev/ui-plugin-bundler-kit':
+    specifier: ^2.12.0
+    version: 2.12.0(vite@3.1.8)
   '@iconify/json':
     specifier: ^2.2.18
     version: 2.2.18
@@ -581,6 +584,15 @@ packages:
       vue: 3.3.7(typescript@4.7.4)
       vue-router: 4.2.5(vue@3.3.7)
     dev: false
+
+  /@halo-dev/ui-plugin-bundler-kit@2.12.0(vite@3.1.8):
+    resolution: {integrity: sha512-3558qzH5RN9pB2j0ZonuIxX3cw8lh870cWpPPHjkDxTIjKt+aO5tjKhcqKlFL853jdx9nHIIS+nMDCeqjejpxw==}
+    engines: {node: ^18.0.0 || >=20.0.0}
+    peerDependencies:
+      vite: ^4.0.0 || ^5.0.0
+    dependencies:
+      vite: 3.1.8(sass@1.58.0)
+    dev: true
 
   /@humanwhocodes/config-array@0.11.6:
     resolution: {integrity: sha512-jJr+hPTJYKyDILJfhNSHsjiwXYf26Flsz8DvNndOsHs5pwSnpGUEy8yzF0JYhCEvTDdV2vuOK5tt8BVhwO5/hg==}
