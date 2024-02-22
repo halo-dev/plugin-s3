@@ -128,7 +128,7 @@
 > * `${uuid-no-dash}_file_${random-alphabetic:5}`会生成`123E4567E89B12D3A456426614174000_file_abcde.png`。<br/>
 > * `halo_${origin-filename}_${random-num:3}`会生成`halo_image_123.png`。
 
-### 上传时重命名文件方式
+### 重复文件名处理方式
 
 * **加随机字母数字后缀：** 如遇重名，会在文件名后加上4位的随机字母数字后缀，例如`image.png`会变成`image_abc1.png`。
 * **加随机字母后缀：** 如遇重名，会在文件名后加上4位的随机字母后缀，例如`image.png`会变成`image_abcd.png`。
