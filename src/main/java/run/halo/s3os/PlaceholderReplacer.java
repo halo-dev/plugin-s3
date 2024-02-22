@@ -9,12 +9,14 @@ import java.util.function.Function;
 import lombok.experimental.UtilityClass;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.springframework.util.PropertyPlaceholderHelper;
 
 @UtilityClass
 public class PlaceholderReplacer {
     record PlaceholderFunctionInput(String[] placeholderParams,
                                     Map<String, String> reusableParams) {
     }
+    private static final PropertyPlaceholderHelper helper = new PropertyPlaceholderHelper("${", "}");
 
     private static final Map<String, Function<PlaceholderFunctionInput, String>>
         placeholderFunctions = new HashMap<>();
@@ -151,33 +153,7 @@ public class PlaceholderReplacer {
         reusableParams.put("filename", filename);
         reusableParams.put("time", LocalDateTime.now().toString());
 
-        StringBuilder result = new StringBuilder();
-        int startIndex = 0;
-        int endIndex;
-
-        while ((endIndex = template.indexOf("${", startIndex)) != -1) {
-            result.append(template, startIndex, endIndex);
-
-            int closingBracketIndex = template.indexOf('}', endIndex);
-            if (closingBracketIndex != -1) {
-                String placeholderWithParam = template.substring(endIndex + 2, closingBracketIndex);
-                String replacement = getPlaceholderValue(placeholderWithParam, reusableParams);
-                result.append(replacement);
-
-                startIndex = closingBracketIndex + 1;
-            } else {
-                // If no closing bracket is found, append the rest of the template and break
-                startIndex = endIndex;
-                break;
-            }
-        }
-
-        // Append the remaining part of the template
-        if (startIndex < template.length()) {
-            result.append(template, startIndex, template.length());
-        }
-
-        return result.toString();
+        return helper.replacePlaceholders(template, placeholder -> getPlaceholderValue(placeholder, reusableParams));
     }
 
     private static String getPlaceholderValue(String placeholderWithParam,
@@ -200,8 +176,8 @@ public class PlaceholderReplacer {
             return placeholderFunction.apply(
                 new PlaceholderFunctionInput(placeholderParams, reusableParams));
         } else {
-            // If placeholder not found, return the original placeholder
-            return "${" + placeholderWithParam + "}";
+            // If placeholder not found, return null to keep the original placeholder string
+            return null;
         }
     }
 
