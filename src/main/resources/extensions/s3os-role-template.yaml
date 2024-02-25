@@ -6,7 +6,7 @@ metadata:
     halo.run/role-template: "true"
   annotations:
     rbac.authorization.halo.run/dependencies: |
-      [ "role-template-manage-attachments", "role-template-view-plugins" ]
+      [ "role-template-manage-attachments" ]
     rbac.authorization.halo.run/module: "S3 Attachments Management"
     rbac.authorization.halo.run/display-name: "S3 Link"
     rbac.authorization.halo.run/ui-permissions: |
