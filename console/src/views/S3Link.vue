@@ -394,7 +394,7 @@ const handleModalClose = () => {
             <div class="inline-flex items-center gap-2">
               <select
                 v-model="size"
-                class="h-8 border outline-none rounded-base px-2 text-gray-800 text-sm border-gray-300"
+                class="h-8 border outline-none rounded-base pr-10 border-solid px-2 text-gray-800 text-sm border-gray-300 page-size-select"
                 @change="handleFirstPage"
               >
                 <option
@@ -448,5 +448,8 @@ const handleModalClose = () => {
 </template>
 
 <style lang="scss" scoped>
-
+.page-size-select:focus {
+  --tw-border-opacity: 1;
+  border-color: rgba(var(--colors-primary),var(--tw-border-opacity));
+}
 </style>
