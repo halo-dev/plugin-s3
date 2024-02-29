@@ -510,8 +510,9 @@ public class S3OsAttachmentHandler implements AttachmentHandler {
             this.originalFileName = fileName;
 
             if (needRandomJudge) {
-                fileName = FileNameUtils.getRandomFilename(fileName,
-                    properties.getRandomStringLength(), properties.getRandomFilenameMode());
+                fileName =
+                    FileNameUtils.replaceFilename(fileName, properties.getRandomFilenameMode(),
+                        properties.getRandomStringLength(), properties.getCustomTemplate());
             }
 
             this.fileName = fileName;
@@ -525,7 +526,10 @@ public class S3OsAttachmentHandler implements AttachmentHandler {
         }
 
         public void randomDuplicateFileName() {
-            this.fileName = FileNameUtils.randomFilenameWithString(originalFileName, 4);
+            this.fileName = FileNameUtils.replaceFilenameWithDuplicateHandling(originalFileName,
+                properties.getRandomFilenameMode(),
+                properties.getRandomStringLength(), properties.getCustomTemplate(),
+                properties.getDuplicateFilenameHandling());
             this.objectKey = properties.getObjectName(fileName);
         }
     }

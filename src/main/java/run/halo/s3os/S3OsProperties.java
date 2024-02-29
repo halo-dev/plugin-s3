@@ -29,7 +29,11 @@ class S3OsProperties {
      */
     private String location;
 
-    private String randomFilenameMode = "none";
+    private RandomFilenameMode randomFilenameMode;
+
+    private String customTemplate;
+
+    private DuplicateFilenameHandling duplicateFilenameHandling;
 
     private Integer randomStringLength = 8;
 
@@ -53,6 +57,14 @@ class S3OsProperties {
         private String urlSuffix;
     }
 
+    public enum DuplicateFilenameHandling {
+        randomAlphanumeric, randomAlphabetic, exception
+    }
+
+    public enum RandomFilenameMode {
+        none, custom, uuid, timestampMs, dateWithString, datetimeWithString, withString, string, random_number
+    }
+
     public String getObjectName(String filename) {
         var objectName = filename;
         var finalName = FilePathUtils.getFilePathByPlaceholder(getLocation());
@@ -62,7 +74,7 @@ class S3OsProperties {
         return objectName;
     }
 
-    enum Protocol {
+    public enum Protocol {
         http, https
     }
 
