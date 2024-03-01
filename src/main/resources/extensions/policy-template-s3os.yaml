@@ -98,7 +98,7 @@ spec:
           label: 自定义文件名模板
           if: "$randomFilenameMode == 'custom'"
           value: "${origin-filename}"
-          help: 支持的占位符请查阅：https://github.com/halo-dev/plugin-s3#上传时重命名文件方式
+          help: 支持的占位符请查阅：https://github.com/halo-dev/plugin-s3#自定义文件名模板
         - $formkit: select
           name: duplicateFilenameHandling
           label: 重复文件名处理方式
