@@ -9,7 +9,7 @@ on:
       - "!**.md"
   release:
     types:
-      - created
+      - published
   pull_request:
     branches:
       - main
