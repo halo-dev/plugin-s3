@@ -14,130 +14,134 @@ spec:
   forms:
     - group: default
       formSchema:
-        - $formkit: text
-          name: bucket
-          label: Bucket 桶名称
-          validation: required
-        - $formkit: select
-          name: endpointProtocol
-          label: Endpoint 访问协议
-          options:
-            - label: HTTPS
-              value: https
-            - label: HTTP
-              value: http
-          validation: required
-        - $formkit: select
-          name: enablePathStyleAccess
-          label: Endpoint 访问风格
-          options:
-            - label: Virtual Hosted Style
-              value: false
-            - label: Path Style
-              value: true
-          value: false
-          validation: required
-        - $formkit: text
-          name: endpoint
-          label: EndPoint
-          placeholder: 请填写不带bucket-name的Endpoint
-          validation: required
-          help: 协议头请在上方设置，此处无需以"http://"或"https://"开头，系统会自动拼接
-        - $formkit: password
-          name: accessKey
-          label: Access Key ID
-          placeholder: 存储桶用户标识(用户名)
-          validation: required
-        - $formkit: password
-          name: accessSecret
-          label: Access Key Secret
-          placeholder: 存储桶密钥(密码)
-          validation: required
-        - $formkit: text
-          name: region
-          label: Region
-          placeholder: 如不填写，则默认为"Auto"
-          help: 若Region为Auto无法使用，才需要填写对应Region
-        - $formkit: text
-          name: location
-          label: 上传目录
-          placeholder: 如不填写，则默认上传到根目录
-          help: 支持的占位符请查阅：https://github.com/halo-dev/plugin-s3#上传目录
-        - $formkit: select
-          name: randomFilenameMode
-          label: 上传时重命名文件方式
-          options:
-            - label: 保留原文件名
-              value: none
-            - label: 自定义（请在下方输入自定义模板）
-              value: custom
-            - label: 使用UUID
-              value: uuid
-            - label: 使用毫秒时间戳
-              value: timestampMs
-            - label: 使用原文件名 + 随机字母
-              value: withString
-            - label: 使用日期 + 随机字母
-              value: dateWithString
-            - label: 使用日期时间 + 随机字母
-              value: datetimeWithString
-            - label: 使用随机字母
-              value: string
-          validation: required
-        - $formkit: number
-          name: randomStringLength
-          key: randomStringLength
-          label: 随机字母长度
-          min: 4
-          max: 16
-          if: "$randomFilenameMode == 'dateWithString' || $randomFilenameMode == 'datetimeWithString' || $randomFilenameMode == 'withString' || $randomFilenameMode == 'string'"
-          help: 支持4~16位, 默认为8位
-        - $formkit: text
-          name: customTemplate
-          key: customTemplate
-          label: 自定义文件名模板
-          if: "$randomFilenameMode == 'custom'"
-          value: "${origin-filename}"
-          help: 支持的占位符请查阅：https://github.com/halo-dev/plugin-s3#自定义文件名模板
-        - $formkit: select
-          name: duplicateFilenameHandling
-          label: 重复文件名处理方式
-          options:
-            - label: 加随机字母数字后缀
-              value: randomAlphanumeric
-            - label: 加随机字母后缀
-              value: randomAlphabetic
-            - label: 报错不上传
-              value: exception
-          validation: required
-        - $formkit: select
-          name: protocol
-          label: 绑定域名协议
-          options:
-            - label: HTTPS
-              value: https
-            - label: HTTP
-              value: http
-          validation: required
-        - $formkit: text
-          name: domain
-          label: 绑定域名（CDN域名）
-          placeholder: 如不设置，那么将使用 Bucket + EndPoint 作为域名
-          help: 协议头请在上方设置，此处无需以"http://"或"https://"开头，系统会自动拼接
-        - $formkit: repeater
-          name: urlSuffixes
-          label: 网址后缀
-          help: 用于对指定文件类型的网址添加后缀处理参数，优先级从上到下只取第一个匹配项
-          value: [ ]
-          min: 0
+        - $formkit: verifyForm
+          actions: "/apis/s3os.halo.run/v1alpha1/configmap/policy/validation"
+          label: 对象存储验证
           children:
             - $formkit: text
-              name: fileSuffix
-              label: 文件后缀
-              placeholder: 以半角逗号分隔，例如：jpg,jpeg,png,gif
+              name: bucket
+              label: Bucket 桶名称
+              validation: required
+            - $formkit: select
+              name: endpointProtocol
+              label: Endpoint 访问协议
+              options:
+                - label: HTTPS
+                  value: https
+                - label: HTTP
+                  value: http
+              validation: required
+            - $formkit: select
+              name: enablePathStyleAccess
+              label: Endpoint 访问风格
+              options:
+                - label: Virtual Hosted Style
+                  value: false
+                - label: Path Style
+                  value: true
+              value: false
               validation: required
             - $formkit: text
-              name: urlSuffix
-              label: 网址后缀
-              placeholder: 例如：?imageMogr2/format/webp
+              name: endpoint
+              label: EndPoint
+              placeholder: 请填写不带bucket-name的Endpoint
               validation: required
+              help: 协议头请在上方设置，此处无需以"http://"或"https://"开头，系统会自动拼接
+            - $formkit: password
+              name: accessKey
+              label: Access Key ID
+              placeholder: 存储桶用户标识(用户名)
+              validation: required
+            - $formkit: password
+              name: accessSecret
+              label: Access Key Secret
+              placeholder: 存储桶密钥(密码)
+              validation: required
+            - $formkit: text
+              name: region
+              label: Region
+              placeholder: 如不填写，则默认为"Auto"
+              help: 若Region为Auto无法使用，才需要填写对应Region
+            - $formkit: text
+              name: location
+              label: 上传目录
+              placeholder: 如不填写，则默认上传到根目录
+              help: 支持的占位符请查阅：https://github.com/halo-dev/plugin-s3#上传目录
+            - $formkit: select
+              name: randomFilenameMode
+              label: 上传时重命名文件方式
+              options:
+                - label: 保留原文件名
+                  value: none
+                - label: 自定义（请在下方输入自定义模板）
+                  value: custom
+                - label: 使用UUID
+                  value: uuid
+                - label: 使用毫秒时间戳
+                  value: timestampMs
+                - label: 使用原文件名 + 随机字母
+                  value: withString
+                - label: 使用日期 + 随机字母
+                  value: dateWithString
+                - label: 使用日期时间 + 随机字母
+                  value: datetimeWithString
+                - label: 使用随机字母
+                  value: string
+              validation: required
+            - $formkit: number
+              name: randomStringLength
+              key: randomStringLength
+              label: 随机字母长度
+              min: 4
+              max: 16
+              if: "$randomFilenameMode == 'dateWithString' || $randomFilenameMode == 'datetimeWithString' || $randomFilenameMode == 'withString' || $randomFilenameMode == 'string'"
+              help: 支持4~16位, 默认为8位
+            - $formkit: text
+              name: customTemplate
+              key: customTemplate
+              label: 自定义文件名模板
+              if: "$randomFilenameMode == 'custom'"
+              value: "${origin-filename}"
+              help: 支持的占位符请查阅：https://github.com/halo-dev/plugin-s3#自定义文件名模板
+            - $formkit: select
+              name: duplicateFilenameHandling
+              label: 重复文件名处理方式
+              options:
+                - label: 加随机字母数字后缀
+                  value: randomAlphanumeric
+                - label: 加随机字母后缀
+                  value: randomAlphabetic
+                - label: 报错不上传
+                  value: exception
+              validation: required
+            - $formkit: select
+              name: protocol
+              label: 绑定域名协议
+              options:
+                - label: HTTPS
+                  value: https
+                - label: HTTP
+                  value: http
+              validation: required
+            - $formkit: text
+              name: domain
+              label: 绑定域名（CDN域名）
+              placeholder: 如不设置，那么将使用 Bucket + EndPoint 作为域名
+              help: 协议头请在上方设置，此处无需以"http://"或"https://"开头，系统会自动拼接
+            - $formkit: repeater
+              name: urlSuffixes
+              label: 网址后缀
+              help: 用于对指定文件类型的网址添加后缀处理参数，优先级从上到下只取第一个匹配项
+              value: [ ]
+              min: 0
+              children:
+                - $formkit: text
+                  name: fileSuffix
+                  label: 文件后缀
+                  placeholder: 以半角逗号分隔，例如：jpg,jpeg,png,gif
+                  validation: required
+                - $formkit: text
+                  name: urlSuffix
+                  label: 网址后缀
+                  placeholder: 例如：?imageMogr2/format/webp
+                  validation: required
