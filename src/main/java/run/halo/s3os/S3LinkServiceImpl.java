@@ -23,7 +23,10 @@ import reactor.core.scheduler.Schedulers;
 import run.halo.app.core.extension.attachment.Attachment;
 import run.halo.app.core.extension.attachment.Policy;
 import run.halo.app.extension.ConfigMap;
+import run.halo.app.extension.ListOptions;
 import run.halo.app.extension.ReactiveExtensionClient;
+import run.halo.app.extension.index.query.EqualQuery;
+import run.halo.app.extension.router.selector.FieldSelector;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.HeadObjectRequest;
 import software.amazon.awssdk.services.s3.model.ListObjectsV2Request;
@@ -73,9 +76,10 @@ public class S3LinkServiceImpl implements S3LinkService {
                             .stream().map(S3ListResult.ObjectVo::fromS3Object)
                             .filter(objectVo -> !objectVo.getKey().endsWith("/"))
                             .collect(Collectors.toMap(S3ListResult.ObjectVo::getKey, o -> o));
-                        return client.list(Attachment.class,
-                                attachment -> policyName.equals(
-                                    attachment.getSpec().getPolicyName()), null)
+                        ListOptions listOptions = new ListOptions();
+                        listOptions.setFieldSelector(
+                            FieldSelector.of(new EqualQuery("spec.policyName", policyName)));
+                        return client.listAll(Attachment.class, listOptions, null)
                             .doOnNext(attachment -> {
                                 S3ListResult.ObjectVo objectVo =
                                     objectVos.get(attachment.getMetadata().getAnnotations()
