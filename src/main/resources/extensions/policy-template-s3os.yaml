@@ -14,7 +14,7 @@ spec:
   forms:
     - group: default
       formSchema:
-        - $formkit: verifyForm
+        - $formkit: verificationForm
           actions: "/apis/s3os.halo.run/v1alpha1/configmap/policy/validation"
           label: 对象存储验证
           children:
