@@ -7,7 +7,11 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import run.halo.app.core.extension.attachment.Attachment;
 import run.halo.app.core.extension.attachment.Policy;
+import run.halo.app.extension.ListOptions;
+import run.halo.app.extension.MetadataUtil;
 import run.halo.app.extension.ReactiveExtensionClient;
+import run.halo.app.extension.index.query.QueryFactory;
+import run.halo.app.extension.router.selector.FieldSelector;
 import run.halo.app.plugin.ApiVersion;
 
 import java.util.Map;
@@ -52,34 +56,38 @@ public class S3LinkController {
             .filter(objectKey -> linkingFile.put(linkRequest.getPolicyName() + "/" + objectKey,
                 linkRequest.getPolicyName() + "/" + objectKey) == null)
             .collectList()
-            .flatMap(operableObjectKeys -> client.list(Attachment.class,
-                    attachment -> Objects.equals(attachment.getSpec().getPolicyName(),
-                        linkRequest.getPolicyName())
-                        && StringUtils.isNotEmpty(attachment.getMetadata().getAnnotations()
-                        .get(S3OsAttachmentHandler.OBJECT_KEY))
-                        && linkRequest.getObjectKeys().contains(attachment.getMetadata()
-                        .getAnnotations().get(S3OsAttachmentHandler.OBJECT_KEY)),
-                    null)
-                .collectList()
-                .flatMap(existingAttachments -> Flux.fromIterable(linkRequest.getObjectKeys())
-                    .flatMap((objectKey) -> {
-                        if (operableObjectKeys.contains(objectKey) && existingAttachments.stream()
-                            .noneMatch(attachment -> Objects.equals(
-                                attachment.getMetadata().getAnnotations().get(
-                                    S3OsAttachmentHandler.OBJECT_KEY), objectKey))) {
-                            return s3LinkService
-                                .addAttachmentRecord(linkRequest.getPolicyName(), objectKey)
-                                .onErrorResume((throwable) -> Mono.just(
-                                    new LinkResult.LinkResultItem(objectKey, false,
-                                        throwable.getMessage())));
-                        } else {
-                            return Mono.just(new LinkResult.LinkResultItem(objectKey, false,
-                                "附件库中已存在该对象"));
-                        }
-                    })
-                    .doOnNext(linkResultItem -> linkingFile.remove(
-                        linkRequest.getPolicyName() + "/" + linkResultItem.getObjectKey()))
+            .flatMap(operableObjectKeys -> {
+                ListOptions listOptions = new ListOptions();
+                listOptions.setFieldSelector(FieldSelector.of(
+                    QueryFactory.equal("spec.policyName", linkRequest.getPolicyName())));
+                return client.listAll(Attachment.class, listOptions, null)
+                    .filter(attachment ->
+                        StringUtils.isNotEmpty(attachment.getMetadata().getAnnotations()
+                            .get(S3OsAttachmentHandler.OBJECT_KEY))
+                            && linkRequest.getObjectKeys().contains(attachment.getMetadata()
+                            .getAnnotations().get(S3OsAttachmentHandler.OBJECT_KEY)))
                     .collectList()
-                    .map(LinkResult::new)));
+                    .flatMap(existingAttachments -> Flux.fromIterable(linkRequest.getObjectKeys())
+                        .flatMap((objectKey) -> {
+                            if (operableObjectKeys.contains(objectKey) &&
+                                existingAttachments.stream()
+                                    .noneMatch(attachment -> Objects.equals(
+                                        attachment.getMetadata().getAnnotations().get(
+                                            S3OsAttachmentHandler.OBJECT_KEY), objectKey))) {
+                                return s3LinkService
+                                    .addAttachmentRecord(linkRequest.getPolicyName(), objectKey)
+                                    .onErrorResume((throwable) -> Mono.just(
+                                        new LinkResult.LinkResultItem(objectKey, false,
+                                            throwable.getMessage())));
+                            } else {
+                                return Mono.just(new LinkResult.LinkResultItem(objectKey, false,
+                                    "附件库中已存在该对象"));
+                            }
+                        })
+                        .doOnNext(linkResultItem -> linkingFile.remove(
+                            linkRequest.getPolicyName() + "/" + linkResultItem.getObjectKey()))
+                        .collectList()
+                        .map(LinkResult::new));
+            });
     }
 }
