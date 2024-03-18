@@ -1,22 +1,25 @@
 package run.halo.s3os;
 
+import java.util.Map;
+import java.util.Objects;
+import java.util.concurrent.ConcurrentHashMap;
 import lombok.RequiredArgsConstructor;
 import org.apache.commons.lang3.StringUtils;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import run.halo.app.core.extension.attachment.Attachment;
 import run.halo.app.core.extension.attachment.Policy;
 import run.halo.app.extension.ListOptions;
-import run.halo.app.extension.MetadataUtil;
 import run.halo.app.extension.ReactiveExtensionClient;
 import run.halo.app.extension.index.query.QueryFactory;
 import run.halo.app.extension.router.selector.FieldSelector;
 import run.halo.app.plugin.ApiVersion;
-
-import java.util.Map;
-import java.util.Objects;
-import java.util.concurrent.ConcurrentHashMap;
 
 @ApiVersion("s3os.halo.run/v1alpha1")
 @RestController
@@ -69,11 +72,11 @@ public class S3LinkController {
                     .collectList()
                     .flatMap(existingAttachments -> Flux.fromIterable(linkRequest.getObjectKeys())
                         .flatMap((objectKey) -> {
-                            if (operableObjectKeys.contains(objectKey) &&
-                                existingAttachments.stream()
+                            if (operableObjectKeys.contains(objectKey)
+                                && existingAttachments.stream()
                                     .noneMatch(attachment -> Objects.equals(
-                                        attachment.getMetadata().getAnnotations().get(
-                                            S3OsAttachmentHandler.OBJECT_KEY), objectKey))) {
+                                        attachment.getMetadata().getAnnotations()
+                                            .get(S3OsAttachmentHandler.OBJECT_KEY), objectKey))) {
                                 return s3LinkService
                                     .addAttachmentRecord(linkRequest.getPolicyName(), objectKey)
                                     .onErrorResume((throwable) -> Mono.just(
