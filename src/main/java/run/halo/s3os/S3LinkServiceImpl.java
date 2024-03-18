@@ -25,7 +25,7 @@ import run.halo.app.core.extension.attachment.Policy;
 import run.halo.app.extension.ConfigMap;
 import run.halo.app.extension.ListOptions;
 import run.halo.app.extension.ReactiveExtensionClient;
-import run.halo.app.extension.index.query.EqualQuery;
+import run.halo.app.extension.index.query.QueryFactory;
 import run.halo.app.extension.router.selector.FieldSelector;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.HeadObjectRequest;
@@ -78,7 +78,7 @@ public class S3LinkServiceImpl implements S3LinkService {
                             .collect(Collectors.toMap(S3ListResult.ObjectVo::getKey, o -> o));
                         ListOptions listOptions = new ListOptions();
                         listOptions.setFieldSelector(
-                            FieldSelector.of(new EqualQuery("spec.policyName", policyName)));
+                            FieldSelector.of(QueryFactory.equal("spec.policyName", policyName)));
                         return client.listAll(Attachment.class, listOptions, null)
                             .doOnNext(attachment -> {
                                 S3ListResult.ObjectVo objectVo =
