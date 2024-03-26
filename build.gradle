@@ -59,6 +59,10 @@ task buildFrontend(type: PnpmTask) {
     args = ['build']
 }
 
+tasks.named('buildFrontend') {
+    dependsOn 'pnpmInstall'
+}
+
 build {
     // build frontend before build
     tasks.getByName('compileJava').dependsOn('buildFrontend')
