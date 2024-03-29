@@ -1,10 +1,6 @@
 package run.halo.s3os;
 
-import java.util.Map;
-import java.util.Objects;
-import java.util.concurrent.ConcurrentHashMap;
 import lombok.RequiredArgsConstructor;
-import org.apache.commons.lang3.StringUtils;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -13,12 +9,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
-import run.halo.app.core.extension.attachment.Attachment;
 import run.halo.app.core.extension.attachment.Policy;
-import run.halo.app.extension.ListOptions;
-import run.halo.app.extension.ReactiveExtensionClient;
-import run.halo.app.extension.index.query.QueryFactory;
-import run.halo.app.extension.router.selector.FieldSelector;
 import run.halo.app.plugin.ApiVersion;
 
 @ApiVersion("s3os.halo.run/v1alpha1")
@@ -26,12 +17,6 @@ import run.halo.app.plugin.ApiVersion;
 @RequiredArgsConstructor
 public class S3LinkController {
     private final S3LinkService s3LinkService;
-    private final ReactiveExtensionClient client;
-
-    /**
-     * Map of linking file, used as a lock, key is policyName/objectKey, value is policyName/objectKey.
-     */
-    private final Map<String, Object> linkingFile = new ConcurrentHashMap<>();
 
     @GetMapping("/policies/s3")
     public Flux<Policy> listS3Policies() {
@@ -55,42 +40,7 @@ public class S3LinkController {
 
     @PostMapping("/attachments/link")
     public Mono<LinkResult> addAttachmentRecord(@RequestBody LinkRequest linkRequest) {
-        return Flux.fromIterable(linkRequest.getObjectKeys())
-            .filter(objectKey -> linkingFile.put(linkRequest.getPolicyName() + "/" + objectKey,
-                linkRequest.getPolicyName() + "/" + objectKey) == null)
-            .collectList()
-            .flatMap(operableObjectKeys -> {
-                ListOptions listOptions = new ListOptions();
-                listOptions.setFieldSelector(FieldSelector.of(
-                    QueryFactory.equal("spec.policyName", linkRequest.getPolicyName())));
-                return client.listAll(Attachment.class, listOptions, null)
-                    .filter(attachment ->
-                        StringUtils.isNotEmpty(attachment.getMetadata().getAnnotations()
-                            .get(S3OsAttachmentHandler.OBJECT_KEY))
-                            && linkRequest.getObjectKeys().contains(attachment.getMetadata()
-                            .getAnnotations().get(S3OsAttachmentHandler.OBJECT_KEY)))
-                    .collectList()
-                    .flatMap(existingAttachments -> Flux.fromIterable(linkRequest.getObjectKeys())
-                        .flatMap((objectKey) -> {
-                            if (operableObjectKeys.contains(objectKey)
-                                && existingAttachments.stream()
-                                    .noneMatch(attachment -> Objects.equals(
-                                        attachment.getMetadata().getAnnotations()
-                                            .get(S3OsAttachmentHandler.OBJECT_KEY), objectKey))) {
-                                return s3LinkService
-                                    .addAttachmentRecord(linkRequest.getPolicyName(), objectKey)
-                                    .onErrorResume((throwable) -> Mono.just(
-                                        new LinkResult.LinkResultItem(objectKey, false,
-                                            throwable.getMessage())));
-                            } else {
-                                return Mono.just(new LinkResult.LinkResultItem(objectKey, false,
-                                    "附件库中已存在该对象"));
-                            }
-                        })
-                        .doOnNext(linkResultItem -> linkingFile.remove(
-                            linkRequest.getPolicyName() + "/" + linkResultItem.getObjectKey()))
-                        .collectList()
-                        .map(LinkResult::new));
-            });
+        return s3LinkService.addAttachmentRecords(linkRequest.getPolicyName(),
+            linkRequest.getObjectKeys());
     }
 }
