@@ -5,7 +5,6 @@ import static run.halo.s3os.S3OsAttachmentHandler.OBJECT_KEY;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -110,7 +109,7 @@ public class S3LinkServiceImpl implements S3LinkService {
     }
 
     @Override
-    public Mono<LinkResult> addAttachmentRecords(String policyName, List<String> objectKeys) {
+    public Mono<LinkResult> addAttachmentRecords(String policyName, Set<String> objectKeys) {
         return getOperableObjectKeys(objectKeys, policyName)
             .flatMap(operableObjectKeys -> getExistingAttachments(objectKeys, policyName)
                 .flatMap(existingAttachments -> getLinkResultItems(objectKeys, operableObjectKeys,
@@ -119,14 +118,14 @@ public class S3LinkServiceImpl implements S3LinkService {
                     .map(LinkResult::new)));
     }
 
-    private Mono<Set<String>> getOperableObjectKeys(List<String> objectKeys, String policyName) {
+    private Mono<Set<String>> getOperableObjectKeys(Set<String> objectKeys, String policyName) {
         return Flux.fromIterable(objectKeys)
             .filter(objectKey ->
                 linkingFile.put(policyName + "/" + objectKey, policyName + "/" + objectKey) == null)
             .collect(Collectors.toSet());
     }
 
-    private Mono<Set<String>> getExistingAttachments(List<String> objectKeys,
+    private Mono<Set<String>> getExistingAttachments(Set<String> objectKeys,
                                                           String policyName) {
         ListOptions listOptions = new ListOptions();
         listOptions.setFieldSelector(
@@ -141,7 +140,7 @@ public class S3LinkServiceImpl implements S3LinkService {
             .collect(Collectors.toSet());
     }
 
-    private Flux<LinkResult.LinkResultItem> getLinkResultItems(List<String> objectKeys,
+    private Flux<LinkResult.LinkResultItem> getLinkResultItems(Set<String> objectKeys,
                                                                Set<String> operableObjectKeys,
                                                                Set<String> existingAttachments,
                                                                String policyName) {
