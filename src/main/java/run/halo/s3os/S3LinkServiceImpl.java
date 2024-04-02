@@ -6,6 +6,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
@@ -118,36 +119,36 @@ public class S3LinkServiceImpl implements S3LinkService {
                     .map(LinkResult::new)));
     }
 
-    private Mono<List<String>> getOperableObjectKeys(List<String> objectKeys, String policyName) {
+    private Mono<Set<String>> getOperableObjectKeys(List<String> objectKeys, String policyName) {
         return Flux.fromIterable(objectKeys)
             .filter(objectKey ->
                 linkingFile.put(policyName + "/" + objectKey, policyName + "/" + objectKey) == null)
-            .collectList();
+            .collect(Collectors.toSet());
     }
 
-    private Mono<List<Attachment>> getExistingAttachments(List<String> objectKeys,
+    private Mono<Set<String>> getExistingAttachments(List<String> objectKeys,
                                                           String policyName) {
         ListOptions listOptions = new ListOptions();
         listOptions.setFieldSelector(
             FieldSelector.of(QueryFactory.equal("spec.policyName", policyName)));
         return client.listAll(Attachment.class, listOptions, null)
             .filter(attachment -> StringUtils.isNotBlank(
-                attachment.getMetadata().getAnnotations().get(S3OsAttachmentHandler.OBJECT_KEY))
+                MetadataUtil.nullSafeAnnotations(attachment).get(S3OsAttachmentHandler.OBJECT_KEY))
                 && objectKeys.contains(
-                attachment.getMetadata().getAnnotations().get(S3OsAttachmentHandler.OBJECT_KEY)))
-            .collectList();
+                MetadataUtil.nullSafeAnnotations(attachment).get(S3OsAttachmentHandler.OBJECT_KEY)))
+            .map(attachment -> MetadataUtil.nullSafeAnnotations(attachment)
+                .get(S3OsAttachmentHandler.OBJECT_KEY))
+            .collect(Collectors.toSet());
     }
 
     private Flux<LinkResult.LinkResultItem> getLinkResultItems(List<String> objectKeys,
-                                                               List<String> operableObjectKeys,
-                                                               List<Attachment> existingAttachments,
+                                                               Set<String> operableObjectKeys,
+                                                               Set<String> existingAttachments,
                                                                String policyName) {
         return Flux.fromIterable(objectKeys)
             .flatMap((objectKey) -> {
                 if (operableObjectKeys.contains(objectKey) &&
-                    existingAttachments.stream().noneMatch(attachment -> Objects.equals(
-                        MetadataUtil.nullSafeAnnotations(attachment)
-                            .get(S3OsAttachmentHandler.OBJECT_KEY), objectKey))) {
+                    !existingAttachments.contains(objectKey)) {
                     return addAttachmentRecord(policyName, objectKey)
                         .onErrorResume((throwable) -> Mono.just(
                             new LinkResult.LinkResultItem(objectKey, false,
