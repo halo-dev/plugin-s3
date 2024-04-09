@@ -69,7 +69,7 @@ public class PlaceholderReplacer {
 
     private static String currentMillisecond(Map<String, String> reusableParams) {
         LocalDateTime time = LocalDateTime.parse(reusableParams.get("time"));
-        return String.valueOf(time.getNano() / 1000000);
+        return String.format("%03d", time.getNano() / 1000000);
     }
 
     private static String currentSecond(Map<String, String> reusableParams) {

@@ -4,6 +4,9 @@ import static run.halo.s3os.S3OsAttachmentHandler.OBJECT_KEY;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
@@ -23,7 +26,11 @@ import reactor.core.scheduler.Schedulers;
 import run.halo.app.core.extension.attachment.Attachment;
 import run.halo.app.core.extension.attachment.Policy;
 import run.halo.app.extension.ConfigMap;
+import run.halo.app.extension.ListOptions;
+import run.halo.app.extension.MetadataUtil;
 import run.halo.app.extension.ReactiveExtensionClient;
+import run.halo.app.extension.index.query.QueryFactory;
+import run.halo.app.extension.router.selector.FieldSelector;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.HeadObjectRequest;
 import software.amazon.awssdk.services.s3.model.ListObjectsV2Request;
@@ -36,6 +43,11 @@ import software.amazon.awssdk.services.s3.model.S3Object;
 public class S3LinkServiceImpl implements S3LinkService {
     private final ReactiveExtensionClient client;
     private final S3OsAttachmentHandler handler;
+
+    /**
+     * Map of linking file, used as a lock, key is policyName/objectKey, value is policyName/objectKey.
+     */
+    private final Map<String, Object> linkingFile = new ConcurrentHashMap<>();
 
 
     @Override
@@ -73,9 +85,10 @@ public class S3LinkServiceImpl implements S3LinkService {
                             .stream().map(S3ListResult.ObjectVo::fromS3Object)
                             .filter(objectVo -> !objectVo.getKey().endsWith("/"))
                             .collect(Collectors.toMap(S3ListResult.ObjectVo::getKey, o -> o));
-                        return client.list(Attachment.class,
-                                attachment -> policyName.equals(
-                                    attachment.getSpec().getPolicyName()), null)
+                        ListOptions listOptions = new ListOptions();
+                        listOptions.setFieldSelector(
+                            FieldSelector.of(QueryFactory.equal("spec.policyName", policyName)));
+                        return client.listAll(Attachment.class, listOptions, null)
                             .doOnNext(attachment -> {
                                 S3ListResult.ObjectVo objectVo =
                                     objectVos.get(attachment.getMetadata().getAnnotations()
@@ -93,6 +106,59 @@ public class S3LinkServiceImpl implements S3LinkService {
                     });
             })
             .onErrorMap(S3ExceptionHandler::map);
+    }
+
+    @Override
+    public Mono<LinkResult> addAttachmentRecords(String policyName, Set<String> objectKeys) {
+        return getOperableObjectKeys(objectKeys, policyName)
+            .flatMap(operableObjectKeys -> getExistingAttachments(objectKeys, policyName)
+                .flatMap(existingAttachments -> getLinkResultItems(objectKeys, operableObjectKeys,
+                    existingAttachments, policyName)
+                    .collectList()
+                    .map(LinkResult::new)));
+    }
+
+    private Mono<Set<String>> getOperableObjectKeys(Set<String> objectKeys, String policyName) {
+        return Flux.fromIterable(objectKeys)
+            .filter(objectKey ->
+                linkingFile.put(policyName + "/" + objectKey, policyName + "/" + objectKey) == null)
+            .collect(Collectors.toSet());
+    }
+
+    private Mono<Set<String>> getExistingAttachments(Set<String> objectKeys,
+                                                          String policyName) {
+        ListOptions listOptions = new ListOptions();
+        listOptions.setFieldSelector(
+            FieldSelector.of(QueryFactory.equal("spec.policyName", policyName)));
+        return client.listAll(Attachment.class, listOptions, null)
+            .filter(attachment -> StringUtils.isNotBlank(
+                MetadataUtil.nullSafeAnnotations(attachment).get(S3OsAttachmentHandler.OBJECT_KEY))
+                && objectKeys.contains(
+                MetadataUtil.nullSafeAnnotations(attachment).get(S3OsAttachmentHandler.OBJECT_KEY)))
+            .map(attachment -> MetadataUtil.nullSafeAnnotations(attachment)
+                .get(S3OsAttachmentHandler.OBJECT_KEY))
+            .collect(Collectors.toSet());
+    }
+
+    private Flux<LinkResult.LinkResultItem> getLinkResultItems(Set<String> objectKeys,
+                                                               Set<String> operableObjectKeys,
+                                                               Set<String> existingAttachments,
+                                                               String policyName) {
+        return Flux.fromIterable(objectKeys)
+            .flatMap((objectKey) -> {
+                if (operableObjectKeys.contains(objectKey) &&
+                    !existingAttachments.contains(objectKey)) {
+                    return addAttachmentRecord(policyName, objectKey)
+                        .onErrorResume((throwable) -> Mono.just(
+                            new LinkResult.LinkResultItem(objectKey, false,
+                                throwable.getMessage())));
+                } else {
+                    return Mono.just(
+                        new LinkResult.LinkResultItem(objectKey, false, "附件库中已存在该对象"));
+                }
+            })
+            .doFinally(signalType -> operableObjectKeys.forEach(
+                objectKey -> linkingFile.remove(policyName + "/" + objectKey)));
     }
 
     @Override
@@ -151,8 +217,6 @@ public class S3LinkServiceImpl implements S3LinkService {
     record TokenState(String currToken, String nextToken) {
     }
 
-
-    @Override
     public Mono<LinkResult.LinkResultItem> addAttachmentRecord(String policyName,
         String objectKey) {
         return authenticationConsumer(authentication -> client.fetch(Policy.class, policyName)

@@ -1,6 +1,7 @@
 package run.halo.s3os;
 
 
+import java.util.Set;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import run.halo.app.core.extension.attachment.Policy;
@@ -11,7 +12,7 @@ public interface S3LinkService {
     Mono<S3ListResult> listObjects(String policyName, String continuationToken,
         Integer pageSize);
 
-    Mono<LinkResult.LinkResultItem> addAttachmentRecord(String policyName, String objectKey);
+    Mono<LinkResult> addAttachmentRecords(String policyName, Set<String> objectKeys);
 
     Mono<S3ListResult> listObjectsUnlinked(String policyName, String continuationToken,
         String continuationObject, Integer pageSize);
