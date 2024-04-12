@@ -114,7 +114,8 @@ public class PolicyConfigValidationController {
                             .then();
                     },
                     SdkAutoCloseable::close);
-            });
+            })
+            .onErrorMap(S3ExceptionHandler::map);
     }
 
     private Mono<byte[]> createImage() {
