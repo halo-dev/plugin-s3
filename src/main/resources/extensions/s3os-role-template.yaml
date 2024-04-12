@@ -39,3 +39,16 @@ rules:
   - apiGroups: [ "s3os.halo.run" ]
     resources: [ "attachments" ]
     verbs: [ "delete" ]
+---
+apiVersion: v1alpha1
+kind: "Role"
+metadata:
+  name: role-template-s3os-policy-config-validation
+  labels:
+    halo.run/role-template: "true"
+    rbac.authorization.halo.run/aggregate-to-role-template-manage-configmaps: "true"
+rules:
+  - apiGroups: ["s3os.halo.run"]
+    resources: ["configmap/validation"]
+    resourceNames: ["policy"]
+    verbs: [ "create" ]
