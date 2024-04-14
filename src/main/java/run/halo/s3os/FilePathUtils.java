@@ -6,6 +6,6 @@ import lombok.experimental.UtilityClass;
 public class FilePathUtils {
 
     public static String getFilePathByPlaceholder(String filePath) {
-        return PlaceholderReplacer.replacePlaceholders(filePath, "");
+        return PlaceholderReplacer.replacePlaceholders(filePath, null);
     }
 }
