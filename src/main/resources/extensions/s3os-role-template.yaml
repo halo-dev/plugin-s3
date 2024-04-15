@@ -49,6 +49,6 @@ metadata:
     rbac.authorization.halo.run/aggregate-to-role-template-manage-configmaps: "true"
 rules:
   - apiGroups: ["s3os.halo.run"]
-    resources: ["configmap/validation"]
-    resourceNames: ["policy"]
+    resources: ["policies/validation"]
+    resourceNames: ["s3"]
     verbs: [ "create" ]

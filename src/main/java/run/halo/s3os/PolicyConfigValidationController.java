@@ -31,7 +31,7 @@ import software.amazon.awssdk.utils.SdkAutoCloseable;
 public class PolicyConfigValidationController {
     private final S3OsAttachmentHandler handler;
 
-    @PostMapping("/configmap/policy/validation")
+    @PostMapping("/policies/s3/validation")
     public Mono<Void> validatePolicyConfig(@RequestBody S3OsProperties properties) {
         var filename = "halo-s3-plugin-test-file-" + System.currentTimeMillis() + ".jpg";
 
