@@ -4,7 +4,7 @@ metadata:
   name: PluginS3ObjectStorage
 spec:
   enabled: true
-  requires: ">=2.13.0"
+  requires: ">=2.14.0"
   author:
     name: Halo OSS Team
     website: https://github.com/halo-dev

@@ -390,8 +390,8 @@ public class S3OsAttachmentHandler implements AttachmentHandler {
             SdkAutoCloseable::close);
     }
 
-    private Mono<UploadState> checkFileExistsAndRename(UploadState uploadState,
-        S3Client s3client) {
+    Mono<UploadState> checkFileExistsAndRename(UploadState uploadState,
+                                               S3Client s3client) {
         return Mono.defer(() -> {
                 // deduplication of uploading files
                 if (uploadingFile.put(uploadState.getUploadingMapKey(),
@@ -437,8 +437,8 @@ public class S3OsAttachmentHandler implements AttachmentHandler {
     }
 
 
-    private Mono<CompletedPart> uploadPart(UploadState uploadState, ByteBuffer buffer,
-        S3Client s3client) {
+    Mono<CompletedPart> uploadPart(UploadState uploadState, ByteBuffer buffer,
+                                   S3Client s3client) {
         final int partNumber = ++uploadState.partCounter;
         return Mono.just(s3client.uploadPart(UploadPartRequest.builder()
                     .bucket(uploadState.properties.getBucket())
@@ -457,7 +457,7 @@ public class S3OsAttachmentHandler implements AttachmentHandler {
             });
     }
 
-    private static void checkResult(SdkResponse result, String operation) {
+    static void checkResult(SdkResponse result, String operation) {
         log.info("operation: {}, result: {}", operation, result);
         if (result.sdkHttpResponse() == null || !result.sdkHttpResponse().isSuccessful()) {
             log.error("Failed to upload object, response: {}", result.sdkHttpResponse());
@@ -465,7 +465,7 @@ public class S3OsAttachmentHandler implements AttachmentHandler {
         }
     }
 
-    private static ByteBuffer concatBuffers(List<DataBuffer> buffers) {
+    static ByteBuffer concatBuffers(List<DataBuffer> buffers) {
         int partSize = 0;
         for (DataBuffer b : buffers) {
             partSize += b.readableByteCount();
