@@ -7,8 +7,5 @@ spec:
     - group: basic
       label: 使用提示
       formSchema:
-        - $formkit: text
-          help: 请前往 “附件 - 存储策略” 添加策略
-          label: 此处不用设置，请前往 “附件 - 存储策略” 添加策略
-          name: text
-          placeholder: 此处不用设置，请前往 “附件 - 存储策略” 添加策略
+        - $el: p
+          children: 请前往 “附件 - 存储策略” 添加策略
