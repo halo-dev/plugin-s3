@@ -27,7 +27,7 @@ const policyName = ref<string>("");
 const page = ref(1);
 const size = ref(50);
 const policyOptions = ref<{ label: string; value: string; attrs: any }[]>([{
-  label: "请选择策略",
+  label: "请选择存储策略",
   value: "",
   attrs: {disabled: true}
 }]);
@@ -58,15 +58,15 @@ const selectedLinkedStatusItem = ref<boolean | undefined>(linkedStatusItems[0].v
 
 const emptyTips = computed(() => {
   if (isFetchingPolicies.value) {
-    return "正在加载策略";
+    return "正在加载存储策略";
   } else {
     if (policyOptions.value.length <= 1) {
-      return "没有可用的策略，请前往【附件】添加S3策略";
+      return "没有可用的存储策略，请前往【附件】添加S3存储策略";
     } else {
       if (!policyName.value) {
-        return "请在左上方选择策略";
+        return "请在左上方选择存储策略";
       } else {
-        return "该策略的 桶/文件夹 下没有文件";
+        return "该存储策略的 桶/文件夹 下没有文件";
       }
     }
   }
@@ -92,7 +92,7 @@ const fetchPolicies = async () => {
     const policiesData = await getApisS3OsHaloRunV1Alpha1PoliciesS3();
     if (policiesData.status == 200) {
       policyOptions.value = [{
-        label: "请选择策略",
+        label: "请选择存储策略",
         value: "",
         attrs: {disabled: true}
       }];
@@ -257,10 +257,11 @@ const handleModalClose = () => {
                 v-if="!selectedFiles.length"
                 class="flex items-center gap-2"
               >
-                策略:
+                <span>存储策略:</span>
                 <FormKit
                   id="policyChoose"
-                  outer-class="!p-0 w-48"
+                  outer-class="!p-0"
+                  style="min-width: 10rem;"
                   v-model="policyName"
                   name="policyName"
                   type="select"
