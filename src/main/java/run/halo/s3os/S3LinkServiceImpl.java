@@ -270,7 +270,7 @@ public class S3LinkServiceImpl implements S3LinkService {
             .flatMap(func);
     }
 
-    public String buildPrefix(String finalLocation, String filePrefix) {
+    String buildPrefix(String finalLocation, String filePrefix) {
         if (StringUtils.isBlank(finalLocation) && StringUtils.isBlank(filePrefix)) {
             return null;
         }
