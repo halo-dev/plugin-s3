@@ -264,9 +264,9 @@ const handleModalClose = () => {
             <div class="flex w-full flex-1 items-center sm:w-auto">
               <div
                 v-if="!selectedFiles.length"
-                class="flex items-center gap-2"
+                class="flex flex-wrap items-center gap-2"
               >
-                <span>存储策略:</span>
+                <span class="whitespace-nowrap">存储策略:</span>
                 <FormKit
                   id="policyChoose"
                   outer-class="!p-0"
