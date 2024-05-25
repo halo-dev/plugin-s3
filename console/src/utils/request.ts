@@ -18,7 +18,9 @@ request.interceptors.response.use(
       return Promise.reject(error);
     }
     const { status } = errorResponse;
-    if (status !== 200) {
+    if (status === 400) {
+      Toast.error(errorResponse.data.detail);
+    } else if (status !== 200) {
       Toast.error("status: " + status);
     }
     return Promise.reject(error);

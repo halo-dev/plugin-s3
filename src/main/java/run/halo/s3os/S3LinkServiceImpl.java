@@ -58,7 +58,7 @@ public class S3LinkServiceImpl implements S3LinkService {
 
     @Override
     public Mono<S3ListResult> listObjects(String policyName, String continuationToken,
-        Integer pageSize) {
+        Integer pageSize, String filePrefix) {
         return client.fetch(Policy.class, policyName)
             .flatMap((policy) -> {
                 var configMapName = policy.getSpec().getConfigMapName();
@@ -68,11 +68,11 @@ public class S3LinkServiceImpl implements S3LinkService {
                 var properties = handler.getProperties(configMap);
                 var finalLocation = FilePathUtils.getFilePathByPlaceholder(properties.getLocation());
                 return Mono.using(() -> handler.buildS3Client(properties),
+                        // 执行 listObjects
                         (s3Client) -> Mono.fromCallable(
                             () -> s3Client.listObjectsV2(ListObjectsV2Request.builder()
                                 .bucket(properties.getBucket())
-                                .prefix(StringUtils.isNotEmpty(finalLocation)
-                                    ? finalLocation + "/" : null)
+                                .prefix(buildPrefix(finalLocation, filePrefix))
                                 .delimiter("/")
                                 .maxKeys(pageSize)
                                 .continuationToken(StringUtils.isNotEmpty(continuationToken)
@@ -81,10 +81,12 @@ public class S3LinkServiceImpl implements S3LinkService {
                         S3Client::close)
                     .flatMap(listObjectsV2Response -> {
                         List<S3Object> contents = listObjectsV2Response.contents();
+                        // 过滤掉目录并转换为ObjectVo
                         var objectVos = contents
                             .stream().map(S3ListResult.ObjectVo::fromS3Object)
                             .filter(objectVo -> !objectVo.getKey().endsWith("/"))
                             .collect(Collectors.toMap(S3ListResult.ObjectVo::getKey, o -> o));
+                        // 获取已经关联的附件并标记
                         ListOptions listOptions = new ListOptions();
                         listOptions.setFieldSelector(
                             FieldSelector.of(QueryFactory.equal("spec.policyName", policyName)));
@@ -163,7 +165,7 @@ public class S3LinkServiceImpl implements S3LinkService {
 
     @Override
     public Mono<S3ListResult> listObjectsUnlinked(String policyName, String continuationToken,
-        String continuationObject, Integer pageSize) {
+        String continuationObject, Integer pageSize, String filePrefix) {
         // TODO 优化成查一次数据库
         return Mono.defer(() -> {
             List<S3ListResult.ObjectVo> s3Objects = new ArrayList<>();
@@ -172,7 +174,8 @@ public class S3LinkServiceImpl implements S3LinkService {
 
             return Flux.defer(() -> Flux.just(
                     new TokenState(null, currToken.get() == null ? "" : currToken.get())))
-                .flatMap(tokenState -> listObjects(policyName, tokenState.nextToken, pageSize))
+                .flatMap(tokenState -> listObjects(policyName, tokenState.nextToken,
+                    pageSize, filePrefix))
                 .flatMap(s3ListResult -> {
                     var filteredObjects = s3ListResult.getObjects();
                     if (!continuationObjectMatched.get()) {
@@ -265,6 +268,20 @@ public class S3LinkServiceImpl implements S3LinkService {
                 "Authentication required.")))
             .map(SecurityContext::getAuthentication)
             .flatMap(func);
+    }
+
+    public String buildPrefix(String finalLocation, String filePrefix) {
+        if (StringUtils.isBlank(finalLocation) && StringUtils.isBlank(filePrefix)) {
+            return null;
+        }
+        StringBuilder sb = new StringBuilder();
+        if (StringUtils.isNotBlank(finalLocation)) {
+            sb.append(finalLocation).append("/");
+        }
+        if (StringUtils.isNotBlank(filePrefix)) {
+            sb.append(filePrefix);
+        }
+        return sb.toString();
     }
 
 }

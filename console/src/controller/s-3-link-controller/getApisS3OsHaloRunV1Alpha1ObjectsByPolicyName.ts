@@ -10,6 +10,7 @@ export function getApisS3OsHaloRunV1Alpha1ObjectsByPolicyName(params: GetApisS3O
         continuationObject: params.continuationObject,
         pageSize: params.pageSize,
         unlinked: params.unlinked,
+        filePrefix: params.filePrefix,
     };
     return request.get<DeepRequired<S3ListResult>>(`/apis/s3os.halo.run/v1alpha1/objects/${params.policyName}`, {
         params: paramsInput,
@@ -22,4 +23,5 @@ interface GetApisS3OsHaloRunV1Alpha1ObjectsByPolicyNameParams {
     continuationObject?: any;
     pageSize: any;
     unlinked?: any;
+    filePrefix?: any;
 }
