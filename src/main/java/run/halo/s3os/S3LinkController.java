@@ -28,13 +28,13 @@ public class S3LinkController {
         @RequestParam(name = "continuationToken", required = false) String continuationToken,
         @RequestParam(name = "continuationObject", required = false) String continuationObject,
         @RequestParam(name = "pageSize") Integer pageSize,
-        @RequestParam(name = "unlinked", required = false, defaultValue = "false")
-        Boolean unlinked) {
+        @RequestParam(name = "unlinked", required = false, defaultValue = "false") Boolean unlinked,
+        @RequestParam(name = "filePrefix", required = false) String filePrefix) {
         if (unlinked) {
             return s3LinkService.listObjectsUnlinked(policyName, continuationToken,
-                continuationObject, pageSize);
+                continuationObject, pageSize, filePrefix);
         } else {
-            return s3LinkService.listObjects(policyName, continuationToken, pageSize);
+            return s3LinkService.listObjects(policyName, continuationToken, pageSize, filePrefix);
         }
     }
 

@@ -14,6 +14,7 @@ import {
   VTag,
 } from "@halo-dev/components";
 import CarbonFolderDetailsReference from "~icons/carbon/folder-details-reference";
+import IconErrorWarning from "~icons/ri/error-warning-line";
 import {computed, onMounted, ref, watch} from "vue";
 import {
   getApisS3OsHaloRunV1Alpha1ObjectsByPolicyName,
@@ -31,6 +32,10 @@ const policyOptions = ref<{ label: string; value: string; attrs: any }[]>([{
   value: "",
   attrs: {disabled: true}
 }]);
+// update when fetch first page
+const filePrefix = ref<string>("");
+// update when user input
+const filePrefixBind = ref<string>("");
 const s3Objects = ref<S3ListResult>({
   objects: [],
   hasMore: false,
@@ -139,6 +144,8 @@ const clearTokenAndObject = () => {
   s3Objects.value.nextContinuationObject = "";
 };
 
+// filePrefix will not be updated from user input
+// if you want to update filePrefix, please call `handleFirstPage`
 const fetchObjects = async () => {
   if (!policyName.value) {
     return;
@@ -152,6 +159,7 @@ const fetchObjects = async () => {
       continuationToken: s3Objects.value.currentToken,
       continuationObject: s3Objects.value.currentContinuationObject,
       unlinked: selectedLinkedStatusItem.value,
+      filePrefix: filePrefix.value
     });
     if (objectsData.status == 200) {
       s3Objects.value = objectsData.data;
@@ -222,6 +230,7 @@ const handleFirstPage = () => {
   isFetching.value = true;
   page.value = 1;
   clearTokenAndObject();
+  filePrefix.value = filePrefixBind.value;
   fetchObjects();
 };
 
@@ -255,9 +264,9 @@ const handleModalClose = () => {
             <div class="flex w-full flex-1 items-center sm:w-auto">
               <div
                 v-if="!selectedFiles.length"
-                class="flex items-center gap-2"
+                class="flex flex-wrap items-center gap-2"
               >
-                <span>存储策略:</span>
+                <span class="whitespace-nowrap">存储策略:</span>
                 <FormKit
                   id="policyChoose"
                   outer-class="!p-0"
@@ -266,8 +275,15 @@ const handleModalClose = () => {
                   name="policyName"
                   type="select"
                   :options="policyOptions"
-                  @change="fetchObjects()"
+                  @change="handleFirstPage"
                 ></FormKit>
+                <icon-error-warning v-if="!policyName" class="text-red-500"/>
+                <SearchInput
+                  v-model="filePrefixBind"
+                  v-if="policyName"
+                  placeholder="请输入文件名前缀搜索"
+                  @update:modelValue="handleFirstPage"
+                ></SearchInput>
               </div>
               <VSpace v-else>
                 <VButton type="primary" @click="handleLink">
