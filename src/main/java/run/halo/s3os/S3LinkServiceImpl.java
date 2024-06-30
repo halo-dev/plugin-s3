@@ -3,6 +3,7 @@ package run.halo.s3os;
 import static run.halo.s3os.S3OsAttachmentHandler.OBJECT_KEY;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -14,6 +15,7 @@ import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.ReactiveSecurityContextHolder;
@@ -53,7 +55,7 @@ public class S3LinkServiceImpl implements S3LinkService {
     @Override
     public Flux<Policy> listS3Policies() {
         return client.list(Policy.class, (policy) -> "s3os".equals(
-            policy.getSpec().getTemplateName()), null);
+            policy.getSpec().getTemplateName()), Comparator.naturalOrder());
     }
 
     @Override
@@ -90,7 +92,7 @@ public class S3LinkServiceImpl implements S3LinkService {
                         ListOptions listOptions = new ListOptions();
                         listOptions.setFieldSelector(
                             FieldSelector.of(QueryFactory.equal("spec.policyName", policyName)));
-                        return client.listAll(Attachment.class, listOptions, null)
+                        return client.listAll(Attachment.class, listOptions, Sort.unsorted())
                             .doOnNext(attachment -> {
                                 S3ListResult.ObjectVo objectVo =
                                     objectVos.get(attachment.getMetadata().getAnnotations()
@@ -132,7 +134,7 @@ public class S3LinkServiceImpl implements S3LinkService {
         ListOptions listOptions = new ListOptions();
         listOptions.setFieldSelector(
             FieldSelector.of(QueryFactory.equal("spec.policyName", policyName)));
-        return client.listAll(Attachment.class, listOptions, null)
+        return client.listAll(Attachment.class, listOptions, Sort.unsorted())
             .filter(attachment -> StringUtils.isNotBlank(
                 MetadataUtil.nullSafeAnnotations(attachment).get(S3OsAttachmentHandler.OBJECT_KEY))
                 && objectKeys.contains(
