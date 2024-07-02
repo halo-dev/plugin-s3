@@ -1,8 +1,8 @@
 package run.halo.s3os;
 
-import org.pf4j.PluginWrapper;
 import org.springframework.stereotype.Component;
 import run.halo.app.plugin.BasePlugin;
+import run.halo.app.plugin.PluginContext;
 
 /**
  * @author johnniang
@@ -11,8 +11,8 @@ import run.halo.app.plugin.BasePlugin;
 @Component
 public class S3OsPlugin extends BasePlugin {
 
-    public S3OsPlugin(PluginWrapper wrapper) {
-        super(wrapper);
+    public S3OsPlugin(PluginContext pluginContext) {
+        super(pluginContext);
     }
 
     @Override
