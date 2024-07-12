@@ -2,11 +2,15 @@ plugins {
     id 'java'
     id "com.github.node-gradle.node" version "5.0.0"
     id "io.freefair.lombok" version "8.0.1"
-    id "run.halo.plugin.devtools" version "0.0.7"
+    id "run.halo.plugin.devtools" version "0.0.9"
+    id 'org.openapi.generator' version '7.7.0'
 }
 
 group 'run.halo.s3os'
-sourceCompatibility = JavaVersion.VERSION_17
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_17
+}
 
 repositories {
     mavenCentral()
@@ -16,7 +20,7 @@ repositories {
 }
 
 dependencies {
-    implementation platform('run.halo.tools.platform:plugin:2.14.0-SNAPSHOT')
+    implementation platform('run.halo.tools.platform:plugin:2.17.0-SNAPSHOT')
     compileOnly 'run.halo.app:api'
 
     implementation platform('software.amazon.awssdk:bom:2.19.8')
@@ -36,7 +40,7 @@ configurations.runtimeClasspath {
 
 
 halo {
-    version = '2.14.0'
+    version = '2.17.0'
 }
 
 haloPlugin {
@@ -66,4 +70,31 @@ tasks.named('buildFrontend') {
 build {
     // build frontend before build
     tasks.getByName('compileJava').dependsOn('buildFrontend')
+}
+
+
+task downloadOpenApiSpec {
+    1
+    doLast {
+        def url = 'http://localhost:8090/v3/api-docs/plugin-s3'
+        def file = layout.buildDirectory.dir("apidocs/openapi.json").get().asFile
+        file.parentFile.mkdirs()
+        file.text = new URL(url).text
+    }
+}
+
+openApiGenerate {
+    generatorName = "typescript-axios"
+    inputSpec = layout.buildDirectory.dir("apidocs/openapi.json").get().asFile.getAbsolutePath()
+    outputDir = "${projectDir}/console/src/api"
+    additionalProperties = [
+            useES6: true,
+            useSingleRequestParameter: true,
+            withSeparateModelsAndApi: true,
+            apiPackage: "api",
+            modelPackage: "models"
+    ]
+    typeMappings = [
+            set: "Array"
+    ]
 }
