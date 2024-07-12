@@ -20,7 +20,7 @@ import { axiosInstance } from "@halo-dev/api-client";
 import { S3LinkControllerApi } from "@/api";
 import type { S3ListResult, LinkResultItem, Policy, ObjectVo } from "@/api";
 
-const s3LinkControllerApi = new S3LinkControllerApi(undefined, "/", axiosInstance);
+const s3LinkControllerApi = new S3LinkControllerApi(undefined, axiosInstance.defaults.baseURL, axiosInstance);
 
 const selectedFiles = ref<string[]>([]);
 const policyName = ref<string>("");
