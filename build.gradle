@@ -74,10 +74,12 @@ build {
 
 
 task downloadOpenApiSpec {
-    def url = 'http://localhost:8090/v3/api-docs/plugin-s3'
-    def file = layout.buildDirectory.dir("apidocs/openapi.json").get().asFile
-    file.parentFile.mkdirs()
-    file.text = new URL(url).text
+    doLast {
+        def url = 'http://localhost:8090/v3/api-docs/plugin-s3'
+        def file = layout.buildDirectory.dir("apidocs/openapi.json").get().asFile
+        file.parentFile.mkdirs()
+        file.text = new URL(url).text
+    }
 }
 
 openApiGenerate {
