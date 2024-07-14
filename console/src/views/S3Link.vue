@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { computed, onMounted, ref, watch } from "vue";
 import {
   IconRefreshLine,
   Toast,
@@ -15,13 +16,11 @@ import {
 } from "@halo-dev/components";
 import CarbonFolderDetailsReference from "~icons/carbon/folder-details-reference";
 import IconErrorWarning from "~icons/ri/error-warning-line";
-import {computed, onMounted, ref, watch} from "vue";
-import {
-  getApisS3OsHaloRunV1Alpha1ObjectsByPolicyName,
-  getApisS3OsHaloRunV1Alpha1PoliciesS3,
-  postApisS3OsHaloRunV1Alpha1AttachmentsLink,
-} from "@/controller";
-import type {ObjectVo, S3ListResult, Policy, LinkResultItem} from "@/interface";
+import { axiosInstance } from "@halo-dev/api-client";
+import { S3LinkControllerApi } from "@/api";
+import type { S3ListResult, LinkResultItem, Policy, ObjectVo } from "@/api";
+
+const s3LinkControllerApi = new S3LinkControllerApi(undefined, axiosInstance.defaults.baseURL, axiosInstance);
 
 const selectedFiles = ref<string[]>([]);
 const policyName = ref<string>("");
@@ -64,17 +63,14 @@ const selectedLinkedStatusItem = ref<boolean | undefined>(linkedStatusItems[0].v
 const emptyTips = computed(() => {
   if (isFetchingPolicies.value) {
     return "正在加载存储策略";
-  } else {
-    if (policyOptions.value.length <= 1) {
-      return "没有可用的存储策略，请前往【附件】添加S3存储策略";
-    } else {
-      if (!policyName.value) {
-        return "请在左上方选择存储策略";
-      } else {
-        return "该存储策略的 桶/文件夹 下没有文件";
-      }
-    }
   }
+  if (policyOptions.value.length <= 1) {
+    return "没有可用的存储策略，请前往【附件】添加S3存储策略";
+  }
+  if (!policyName.value) {
+    return "请在左上方选择存储策略";
+  }
+  return "该存储策略的 桶/文件夹 下没有文件";
 });
 
 const handleCheckAllChange = (e: Event) => {
@@ -94,14 +90,14 @@ const handleCheckAllChange = (e: Event) => {
 
 const fetchPolicies = async () => {
   try {
-    const policiesData = await getApisS3OsHaloRunV1Alpha1PoliciesS3();
-    if (policiesData.status == 200) {
+    const {status, data} = await s3LinkControllerApi.listS3Policies();
+    if (status == 200) {
       policyOptions.value = [{
         label: "请选择存储策略",
         value: "",
         attrs: {disabled: true}
       }];
-      policiesData.data.forEach((policy: Policy) => {
+      data.forEach((policy: Policy) => {
         policyOptions.value.push({
           label: policy.spec.displayName,
           value: policy.metadata.name,
@@ -114,21 +110,6 @@ const fetchPolicies = async () => {
   }
   isFetchingPolicies.value = false;
 };
-
-
-onMounted(() => {
-  fetchPolicies();
-});
-
-watch(selectedFiles, (newValue) => {
-  checkedAll.value = s3Objects.value.objects?.filter(file => !file.isLinked)
-      .filter(file => !newValue.includes(file.key || "")).length == 0
-    && s3Objects.value.objects?.length != 0;
-});
-
-watch(selectedLinkedStatusItem, () => {
-  handleFirstPage();
-});
 
 const changeNextTokenAndObject = () => {
   s3Objects.value.currentToken = s3Objects.value.nextToken;
@@ -153,7 +134,7 @@ const fetchObjects = async () => {
   isFetching.value = true;
   s3Objects.value.objects = [];
   try {
-    const objectsData = await getApisS3OsHaloRunV1Alpha1ObjectsByPolicyName({
+    const {status, data} = await s3LinkControllerApi.listObjects({
       policyName: policyName.value,
       pageSize: size.value,
       continuationToken: s3Objects.value.currentToken,
@@ -161,13 +142,12 @@ const fetchObjects = async () => {
       unlinked: selectedLinkedStatusItem.value,
       filePrefix: filePrefix.value
     });
-    if (objectsData.status == 200) {
-      s3Objects.value = objectsData.data;
-
-      if (s3Objects.value.objects?.length == 0 && s3Objects.value.hasMore && s3Objects.value.nextToken) {
+    if (status === 200) {
+      s3Objects.value = data;
+      if (s3Objects.value.objects?.length === 0 && s3Objects.value.hasMore && s3Objects.value.nextToken) {
         changeNextTokenAndObject();
         await fetchObjects();
-      } else if (s3Objects.value.objects?.length == 0 && !s3Objects.value.hasMore && page.value > 1) {
+      } else if (s3Objects.value.objects?.length === 0 && !s3Objects.value.hasMore && page.value > 1) {
         page.value = 1;
         clearTokenAndObject();
         await fetchObjects();
@@ -191,17 +171,19 @@ const handleLink = async () => {
   isShowModal.value = true;
   linkTips.value = `正在关联${selectedFiles.value.length}个文件`;
   linkFailedTable.value = [];
-  const linkResult = await postApisS3OsHaloRunV1Alpha1AttachmentsLink({
-    policyName: policyName.value,
-    objectKeys: selectedFiles.value
+  const linkResult = await s3LinkControllerApi.addAttachmentRecord({
+    linkRequest: {
+      policyName: policyName.value,
+      objectKeys: selectedFiles.value
+    }
   });
-
-  const successCount = linkResult.data.items.filter(item => item.success).length;
-  const failedCount = linkResult.data.items.filter(item => !item.success).length;
+  const items = linkResult.data.items || [];
+  const successCount = items.filter(item => item.success).length;
+  const failedCount = items.filter(item => !item.success).length;
   linkTips.value = `关联成功${successCount}个文件，关联失败${failedCount}个文件`;
 
   if (failedCount > 0) {
-    linkFailedTable.value = linkResult.data.items.filter(item => !item.success);
+    linkFailedTable.value = items.filter(item => !item.success);
   }
   isLinking.value = false;
 };
@@ -212,15 +194,13 @@ const selectOneAndLink = (file: ObjectVo) => {
 };
 
 const handleNextPage = () => {
-  if (!policyName.value) {
+  if (!policyName.value || !s3Objects.value.hasMore) {
     return;
   }
-  if (s3Objects.value.hasMore) {
-    isFetching.value = true;
-    page.value += 1;
-    changeNextTokenAndObject();
-    fetchObjects();
-  }
+  isFetching.value = true;
+  page.value += 1;
+  changeNextTokenAndObject();
+  fetchObjects();
 };
 
 const handleFirstPage = () => {
@@ -238,6 +218,17 @@ const handleModalClose = () => {
   isShowModal.value = false;
   fetchObjects();
 };
+
+onMounted(fetchPolicies);
+
+watch(selectedFiles, (newValue) => {
+  checkedAll.value = s3Objects.value.objects?.filter(file => !file.isLinked)
+      .filter(file => !newValue.includes(file.key || "")).length === 0
+    && s3Objects.value.objects?.length !== 0;
+});
+
+watch(selectedLinkedStatusItem, handleFirstPage);
+
 </script>
 
 <template>
@@ -400,11 +391,11 @@ const handleModalClose = () => {
           </div>
           <div class="inline-flex items-center gap-5">
             <div class="inline-flex items-center gap-2">
-              <VButton size="small" @click="handleFirstPage" :disabled="!policyName">返回第一页</VButton>
+              <VButton @click="handleFirstPage" :disabled="!policyName">返回第一页</VButton>
 
               <span class="text-sm text-gray-500">第 {{ page }} 页</span>
 
-              <VButton size="small" @click="handleNextPage" :disabled="!s3Objects.hasMore || isFetching || !policyName">
+              <VButton @click="handleNextPage" :disabled="!s3Objects.hasMore || isFetching || !policyName">
                 下一页
               </VButton>
             </div>
@@ -456,8 +447,8 @@ const handleModalClose = () => {
           <th class="border border-black font-normal">失败原因</th>
         </tr>
         <tr v-for="failedInfo in linkFailedTable" :key="failedInfo.objectKey">
-          <th class="border border-black font-normal">{{failedInfo.objectKey}}</th>
-          <th class="border border-black font-normal">{{failedInfo.message}}</th>
+          <th class="border border-black font-normal">{{ failedInfo.objectKey }}</th>
+          <th class="border border-black font-normal">{{ failedInfo.message }}</th>
         </tr>
       </table>
     </div>
@@ -467,6 +458,6 @@ const handleModalClose = () => {
 <style lang="scss" scoped>
 .page-size-select:focus {
   --tw-border-opacity: 1;
-  border-color: rgba(var(--colors-primary),var(--tw-border-opacity));
+  border-color: rgba(var(--colors-primary), var(--tw-border-opacity));
 }
 </style>

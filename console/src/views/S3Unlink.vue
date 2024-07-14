@@ -1,8 +1,11 @@
 <script setup lang="ts">
-import {deleteApisS3OsHaloRunV1Alpha1AttachmentsByName} from "@/controller";
-import type {Attachment} from "@halo-dev/api-client";
 import {Dialog, Toast, VDropdownDivider, VDropdownItem} from "@halo-dev/components";
 import {useQueryClient} from "@tanstack/vue-query";
+import {axiosInstance} from "@halo-dev/api-client"
+import type {Attachment} from "@halo-dev/api-client";
+import {S3UnlinkControllerApi} from "@/api"
+
+const s3UnlinkControllerApi = new S3UnlinkControllerApi(undefined, axiosInstance.defaults.baseURL, axiosInstance);
 
 const props = defineProps<{
   attachment: Attachment;
@@ -18,12 +21,12 @@ const handleUnlink = () => {
     cancelText: "取消",
     onConfirm: async () => {
       try {
-        await deleteApisS3OsHaloRunV1Alpha1AttachmentsByName({name: props.attachment.metadata.name});
+        await s3UnlinkControllerApi.unlink({name: props.attachment.metadata.name});
         Toast.success("解除关联成功");
       } catch (e) {
         console.error("Failed to delete attachment", e);
       } finally {
-        queryClient.invalidateQueries({queryKey: ["attachments"]});
+        await queryClient.invalidateQueries({queryKey: ["attachments"]});
       }
     },
   });
