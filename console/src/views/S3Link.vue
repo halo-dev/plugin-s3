@@ -365,7 +365,7 @@ watch(selectedLinkedStatusItem, handleFirstPage);
           class="box-border h-full w-full divide-y divide-gray-100"
           role="list"
         >
-          <li style="padding: 8px 16px 0;">
+          <li style="padding: 0.5rem 1rem 0">
             <span class="ml-1 mb-1 block text-sm text-gray-500">关联后所加入的分组</span>
             <div class="mb-5 grid grid-cols-2 gap-x-2 gap-y-3 md:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-6">
               <button
