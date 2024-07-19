@@ -13,6 +13,7 @@ import {
   VModal,
   VPageHeader,
   VSpace,
+  VStatusDot,
   VTag,
 } from "@halo-dev/components";
 import CarbonFolderDetailsReference from "~icons/carbon/folder-details-reference";
