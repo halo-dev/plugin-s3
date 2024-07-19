@@ -41,6 +41,6 @@ public class S3LinkController {
     @PostMapping("/attachments/link")
     public Mono<LinkResult> addAttachmentRecord(@RequestBody LinkRequest linkRequest) {
         return s3LinkService.addAttachmentRecords(linkRequest.getPolicyName(),
-            linkRequest.getObjectKeys());
+            linkRequest.getObjectKeys(), linkRequest.getGroupName());
     }
 }

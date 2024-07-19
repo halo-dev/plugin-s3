@@ -22,6 +22,12 @@
 export interface LinkRequest {
     /**
      * 
+     * @type {string}
+     * @memberof LinkRequest
+     */
+    'groupName'?: string;
+    /**
+     * 
      * @type {Array<string>}
      * @memberof LinkRequest
      */

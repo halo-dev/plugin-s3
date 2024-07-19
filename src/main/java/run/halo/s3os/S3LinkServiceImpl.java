@@ -113,11 +113,11 @@ public class S3LinkServiceImpl implements S3LinkService {
     }
 
     @Override
-    public Mono<LinkResult> addAttachmentRecords(String policyName, Set<String> objectKeys) {
+    public Mono<LinkResult> addAttachmentRecords(String policyName, Set<String> objectKeys, String groupName) {
         return getOperableObjectKeys(objectKeys, policyName)
             .flatMap(operableObjectKeys -> getExistingAttachments(objectKeys, policyName)
                 .flatMap(existingAttachments -> getLinkResultItems(objectKeys, operableObjectKeys,
-                    existingAttachments, policyName)
+                    existingAttachments, policyName, groupName)
                     .collectList()
                     .map(LinkResult::new)));
     }
@@ -147,12 +147,13 @@ public class S3LinkServiceImpl implements S3LinkService {
     private Flux<LinkResult.LinkResultItem> getLinkResultItems(Set<String> objectKeys,
                                                                Set<String> operableObjectKeys,
                                                                Set<String> existingAttachments,
-                                                               String policyName) {
+                                                               String policyName,
+                                                               String groupName) {
         return Flux.fromIterable(objectKeys)
             .flatMap((objectKey) -> {
                 if (operableObjectKeys.contains(objectKey) &&
                     !existingAttachments.contains(objectKey)) {
-                    return addAttachmentRecord(policyName, objectKey)
+                    return addAttachmentRecord(policyName, objectKey, groupName)
                         .onErrorResume((throwable) -> Mono.just(
                             new LinkResult.LinkResultItem(objectKey, false,
                                 throwable.getMessage())));
@@ -223,7 +224,7 @@ public class S3LinkServiceImpl implements S3LinkService {
     }
 
     public Mono<LinkResult.LinkResultItem> addAttachmentRecord(String policyName,
-        String objectKey) {
+        String objectKey, String groupName) {
         return authenticationConsumer(authentication -> client.fetch(Policy.class, policyName)
             .flatMap((policy) -> {
                 var configMapName = policy.getSpec().getConfigMapName();
@@ -255,6 +256,9 @@ public class S3LinkServiceImpl implements S3LinkService {
                         }
                         spec.setOwnerName(authentication.getName());
                         spec.setPolicyName(policyName);
+                        if (StringUtils.isNotBlank(groupName)){
+                            spec.setGroupName(groupName);
+                        }
                     })
                     .flatMap(client::create)
                     .thenReturn(new LinkResult.LinkResultItem(objectKey, true, null));
