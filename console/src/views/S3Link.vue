@@ -269,7 +269,7 @@ watch(selectedLinkedStatusItem, handleFirstPage);
 </script>
 
 <template>
-  <VPageHeader title="关联S3文件(Beta)">
+  <VPageHeader title="关联S3文件">
     <template #icon>
       <CarbonFolderDetailsReference class="mr-2 self-center"/>
     </template>
