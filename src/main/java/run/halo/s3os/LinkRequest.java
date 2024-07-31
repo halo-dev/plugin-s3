@@ -9,4 +9,5 @@ import lombok.RequiredArgsConstructor;
 public class LinkRequest {
     private String policyName;
     private Set<String> objectKeys;
+    private String groupName;
 }

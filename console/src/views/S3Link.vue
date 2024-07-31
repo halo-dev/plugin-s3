@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from "vue";
+import { computed, getCurrentInstance, onMounted, ref, watch } from "vue";
 import {
+  IconCheckboxCircle,
   IconRefreshLine,
   Toast,
   VButton,
@@ -12,25 +13,47 @@ import {
   VModal,
   VPageHeader,
   VSpace,
+  VStatusDot,
   VTag,
 } from "@halo-dev/components";
 import CarbonFolderDetailsReference from "~icons/carbon/folder-details-reference";
 import IconErrorWarning from "~icons/ri/error-warning-line";
-import { axiosInstance } from "@halo-dev/api-client";
+import { axiosInstance, coreApiClient, type Group } from "@halo-dev/api-client";
 import { S3LinkControllerApi } from "@/api";
 import type { S3ListResult, LinkResultItem, Policy, ObjectVo } from "@/api";
 
 const s3LinkControllerApi = new S3LinkControllerApi(undefined, axiosInstance.defaults.baseURL, axiosInstance);
 
+const componentInstance = getCurrentInstance();
+const t = (key: string) => {
+  // @ts-ignore
+  if (typeof componentInstance?.proxy?.$t === 'function') {
+    // @ts-ignore
+    return componentInstance.proxy.$t(key);
+  }
+  return key;
+};
+
 const selectedFiles = ref<string[]>([]);
 const policyName = ref<string>("");
 const page = ref(1);
 const size = ref(50);
+const selectedGroup = ref("")
 const policyOptions = ref<{ label: string; value: string; attrs: any }[]>([{
   label: "请选择存储策略",
   value: "",
   attrs: {disabled: true}
 }]);
+const defaultGroup = ref<Group>({
+  apiVersion: "",
+  kind: "",
+  metadata: {
+    name: "",
+  },
+  spec: {
+    displayName: t("core.attachment.common.text.ungrouped"),
+  },
+});
 // update when fetch first page
 const filePrefix = ref<string>("");
 // update when user input
@@ -43,6 +66,7 @@ const s3Objects = ref<S3ListResult>({
   currentContinuationObject: "",
   nextContinuationObject: "",
 });
+const customGroups = ref<Group[]>([]);
 // view state
 const isFetching = ref(false);
 const isShowModal = ref(false);
@@ -91,7 +115,7 @@ const handleCheckAllChange = (e: Event) => {
 const fetchPolicies = async () => {
   try {
     const {status, data} = await s3LinkControllerApi.listS3Policies();
-    if (status == 200) {
+    if (status === 200) {
       policyOptions.value = [{
         label: "请选择存储策略",
         value: "",
@@ -174,7 +198,8 @@ const handleLink = async () => {
   const linkResult = await s3LinkControllerApi.addAttachmentRecord({
     linkRequest: {
       policyName: policyName.value,
-      objectKeys: selectedFiles.value
+      objectKeys: selectedFiles.value,
+      groupName: selectedGroup.value,
     }
   });
   const items = linkResult.data.items || [];
@@ -219,7 +244,20 @@ const handleModalClose = () => {
   fetchObjects();
 };
 
-onMounted(fetchPolicies);
+const fetchCustomGroups = async () => {
+  const {status, data} = await coreApiClient.storage.group.listGroup({
+    labelSelector: ["!halo.run/hidden"],
+    sort: ["metadata.creationTimestamp,asc"],
+  });
+  if (status === 200) {
+    customGroups.value = data.items;
+  }
+};
+
+onMounted(() => {
+  fetchPolicies();
+  fetchCustomGroups();
+});
 
 watch(selectedFiles, (newValue) => {
   checkedAll.value = s3Objects.value.objects?.filter(file => !file.isLinked)
@@ -232,7 +270,7 @@ watch(selectedLinkedStatusItem, handleFirstPage);
 </script>
 
 <template>
-  <VPageHeader title="关联S3文件(Beta)">
+  <VPageHeader title="关联S3文件">
     <template #icon>
       <CarbonFolderDetailsReference class="mr-2 self-center"/>
     </template>
@@ -327,6 +365,37 @@ watch(selectedLinkedStatusItem, handleFirstPage);
           class="box-border h-full w-full divide-y divide-gray-100"
           role="list"
         >
+          <li style="padding: 0.5rem 1rem 0">
+            <span class="ml-1 mb-1 block text-sm text-gray-500">关联后所加入的分组</span>
+            <div class="mb-5 grid grid-cols-2 gap-x-2 gap-y-3 md:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-6">
+              <button
+                type="button"
+                class="inline-flex h-full w-full items-center gap-2 rounded-md border border-gray-200 bg-white px-3 py-2.5 text-sm font-medium text-gray-800 hover:bg-gray-50 hover:shadow-sm"
+                v-for="(group, index) in [defaultGroup, ...customGroups]"
+                :key="index"
+                :class="{ '!bg-gray-100 shadow-sm': group.metadata.name === selectedGroup }"
+                @click="selectedGroup = group.metadata.name"
+              >
+                <div class="inline-flex w-full flex-1 gap-x-2 break-all text-left">
+                  <slot name="text">
+                    {{ group?.spec.displayName }}
+                  </slot>
+                  <VStatusDot
+                    v-if="group?.metadata.deletionTimestamp"
+                    v-tooltip="$t('core.common.status.deleting')"
+                    state="warning"
+                    animate
+                  />
+                </div>
+                <div class="flex-none">
+                  <IconCheckboxCircle
+                    v-if="group.metadata.name === selectedGroup"
+                    class="text-primary"
+                  />
+                </div>
+              </button>
+            </div>
+          </li>
           <li v-for="(file, index) in s3Objects.objects" :key="index">
             <VEntity :is-selected="checkSelection(file)">
               <template
