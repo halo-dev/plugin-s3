@@ -67,7 +67,7 @@ public class S3LinkServiceImpl implements S3LinkService {
                 return client.fetch(ConfigMap.class, configMapName);
             })
             .flatMap((configMap) -> {
-                var properties = handler.getProperties(configMap);
+                var properties = S3OsProperties.convertFrom(configMap);
                 var finalLocation = FilePathUtils.getFilePathByPlaceholder(properties.getLocation());
                 return Mono.using(() -> handler.buildS3Client(properties),
                         // 执行 listObjects
@@ -231,7 +231,7 @@ public class S3LinkServiceImpl implements S3LinkService {
                 return client.fetch(ConfigMap.class, configMapName);
             })
             .flatMap(configMap -> {
-                var properties = handler.getProperties(configMap);
+                var properties = S3OsProperties.convertFrom(configMap);
                 return Mono.using(() -> handler.buildS3Client(properties),
                         (s3Client) -> Mono.fromCallable(
                                 () -> s3Client.headObject(

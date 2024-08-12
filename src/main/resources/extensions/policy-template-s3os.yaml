@@ -145,3 +145,44 @@ spec:
                   label: 网址后缀
                   placeholder: 例如：?imageMogr2/format/webp
                   validation: required
+            - $formkit: group
+              label: 缩略图参数
+              name: thumbnailParam
+              children:
+                - $formkit: select
+                  name: type
+                  key: type
+                  label: 类型
+                  options:
+                    - label: 无
+                      value: ""
+                    - label: 预设参数
+                      value: preset
+                    - label: 自定义参数
+                      value: custom
+                - $formkit: select
+                  if: "$value.type == preset"
+                  name: pattern
+                  key: type
+                  label: 使用预设参数
+                  help: 请根据您的对象存储服务商选择对应的缩略图参数
+                  options:
+                    - label: 腾讯云 COS
+                      value: "?imageView2/0/w/{width}"
+                    - label: 七牛云 KODO
+                      value: "?imageView2/0/w/{width}"
+                    - label: 阿里云 OSS
+                      value: "?x-oss-process=image/resize,w_{width},m_lfit"
+                    - label: 百度云 BOS
+                      value: "?x-bce-process=image/resize,m_lfit,w_{width}"
+                    - label: 青云 OSS
+                      value: "?image&action=resize:w_{width},m_2"
+                    - label: 京东云
+                      value: "?x-oss-process=img/sw/{width}"
+                    - label: 又拍云
+                      value: "!/fw/{width}"
+                - $formkit: text
+                  if: "$value.type == custom"
+                  label: 自定义参数
+                  help: "{width} 为宽度占位符将被替换为所需缩略图宽度值，如: 400，参数需要以 ? 开头，间隔符除外"
+                  name: pattern

@@ -10,6 +10,7 @@ import run.halo.app.plugin.PluginContext;
  */
 @Component
 public class S3OsPlugin extends BasePlugin {
+    public static final String POLICY_SETTING_NAME = "s3os-policy-template-setting";
 
     public S3OsPlugin(PluginContext pluginContext) {
         super(pluginContext);
