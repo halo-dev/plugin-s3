@@ -50,13 +50,7 @@ public class S3OsProperties {
 
     private List<urlSuffixItem> urlSuffixes;
 
-    private ThumbnailParam thumbnailParam;
-
-    public record ThumbnailParam(String type, String pattern) {
-        public boolean hasPattern() {
-            return StringUtils.hasText(type) && StringUtils.hasText(pattern);
-        }
-    }
+    private String thumbnailParamPattern;
 
     @Data
     @AllArgsConstructor

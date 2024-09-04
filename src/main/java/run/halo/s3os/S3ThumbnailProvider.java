@@ -43,8 +43,10 @@ public class S3ThumbnailProvider implements ThumbnailProvider {
             .mapNotNull(cacheValue -> placedPattern(cacheValue.pattern(), size))
             .map(param -> {
                 if (param.startsWith("?")) {
-                    UriComponentsBuilder.fromHttpUrl(url)
-                        .queryParam(param.substring(1));
+                    return UriComponentsBuilder.fromHttpUrl(url)
+                        .queryParam(param.substring(1))
+                        .build()
+                        .toString();
                 }
                 return url + param;
             })
@@ -91,13 +93,13 @@ public class S3ThumbnailProvider implements ThumbnailProvider {
                 var s3ConfigMapName = s3Policy.getSpec().getConfigMapName();
                 return fetchS3PropsByConfigMapName(s3ConfigMapName)
                     .mapNotNull(properties -> {
-                        var thumbnailParam = properties.getThumbnailParam();
-                        if (thumbnailParam == null || !thumbnailParam.hasPattern()) {
+                        var thumbnailParam = properties.getThumbnailParamPattern();
+                        if (StringUtils.isBlank(thumbnailParam)) {
                             return null;
                         }
                         var objectDomain = properties.toObjectURL("");
                         var cacheValue = S3PropsCacheValue.builder()
-                            .pattern(thumbnailParam.pattern())
+                            .pattern(thumbnailParam)
                             .configMapName(s3ConfigMapName)
                             .build();
                         return Map.entry(objectDomain, cacheValue);
