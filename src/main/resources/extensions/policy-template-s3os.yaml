@@ -157,9 +157,7 @@ spec:
               options:
                 - label: 无
                   value: ""
-                - label: 腾讯云 COS
-                  value: "?imageView2/0/w/{width}"
-                - label: 七牛云 KODO
+                - label: 腾讯云 COS / 七牛云 KODO
                   value: "?imageView2/0/w/{width}"
                 - label: 阿里云 OSS
                   value: "?x-oss-process=image/resize,w_{width},m_lfit"

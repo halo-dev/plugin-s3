@@ -1,28 +1,20 @@
 package run.halo.s3os;
 
-import static run.halo.s3os.S3OsPlugin.POLICY_SETTING_NAME;
-
 import java.net.URI;
 import java.net.URL;
-import java.util.List;
 import java.util.Map;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 import lombok.Builder;
 import lombok.RequiredArgsConstructor;
 import org.apache.commons.lang3.StringUtils;
-import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Component;
-import org.springframework.util.Assert;
 import org.springframework.web.util.UriComponentsBuilder;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import run.halo.app.core.attachment.ThumbnailProvider;
 import run.halo.app.core.attachment.ThumbnailSize;
-import run.halo.app.core.extension.attachment.Policy;
-import run.halo.app.core.extension.attachment.PolicyTemplate;
 import run.halo.app.extension.ConfigMap;
-import run.halo.app.extension.ListOptions;
 import run.halo.app.extension.ReactiveExtensionClient;
 
 @Component
@@ -34,6 +26,7 @@ public class S3ThumbnailProvider implements ThumbnailProvider {
         .build();
 
     private final ReactiveExtensionClient client;
+    private final S3LinkService s3LinkService;
 
     @Override
     public Mono<URI> generate(ThumbnailContext thumbnailContext) {
@@ -86,9 +79,7 @@ public class S3ThumbnailProvider implements ThumbnailProvider {
     }
 
     private Flux<Map.Entry<String, S3PropsCacheValue>> listAllS3ObjectDomain() {
-        return listS3PolicyTemplateNames()
-            .collectList()
-            .flatMapMany(this::listAllS3Policy)
+        return s3LinkService.listS3Policies()
             .flatMap(s3Policy -> {
                 var s3ConfigMapName = s3Policy.getSpec().getConfigMapName();
                 return fetchS3PropsByConfigMapName(s3ConfigMapName)
@@ -108,23 +99,8 @@ public class S3ThumbnailProvider implements ThumbnailProvider {
             .doOnNext(cache -> s3PropsCache.put(cache.getKey(), cache.getValue()));
     }
 
-    private Flux<Policy> listAllS3Policy(List<String> s3PolicyTemplateNames) {
-        Assert.notNull(s3PolicyTemplateNames, "The s3PolicyTemplateNames must not be null.");
-        return client.listAll(Policy.class, new ListOptions(), Sort.unsorted())
-            .filter(policy -> {
-                var templateName = policy.getSpec().getTemplateName();
-                return s3PolicyTemplateNames.contains(templateName);
-            });
-    }
-
     private Mono<S3OsProperties> fetchS3PropsByConfigMapName(String name) {
         return client.fetch(ConfigMap.class, name)
             .map(S3OsProperties::convertFrom);
-    }
-
-    private Flux<String> listS3PolicyTemplateNames() {
-        return client.listAll(PolicyTemplate.class, new ListOptions(), Sort.unsorted())
-            .filter(policyTemplate -> POLICY_SETTING_NAME.equals(policyTemplate.getSpec().getSettingName()))
-            .map(template -> template.getMetadata().getName());
     }
 }
