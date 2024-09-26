@@ -3,7 +3,6 @@ package run.halo.s3os;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.ByteBuffer;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.FileAlreadyExistsException;
 import java.time.Duration;
 import java.util.HashMap;
@@ -23,7 +22,6 @@ import org.springframework.http.MediaTypeFactory;
 import org.springframework.lang.Nullable;
 import org.springframework.web.server.ServerErrorException;
 import org.springframework.web.server.ServerWebInputException;
-import org.springframework.web.util.UriUtils;
 import reactor.core.Exceptions;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -38,7 +36,6 @@ import run.halo.app.core.extension.attachment.endpoint.AttachmentHandler;
 import run.halo.app.extension.ConfigMap;
 import run.halo.app.extension.Metadata;
 import run.halo.app.extension.MetadataUtil;
-import run.halo.app.infra.utils.JsonUtils;
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
 import software.amazon.awssdk.awscore.presigner.SdkPresigner;
 import software.amazon.awssdk.core.SdkResponse;
@@ -47,16 +44,7 @@ import software.amazon.awssdk.http.SdkHttpResponse;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.S3Configuration;
-import software.amazon.awssdk.services.s3.model.CompleteMultipartUploadRequest;
-import software.amazon.awssdk.services.s3.model.CompletedMultipartUpload;
-import software.amazon.awssdk.services.s3.model.CompletedPart;
-import software.amazon.awssdk.services.s3.model.CreateMultipartUploadRequest;
-import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
-import software.amazon.awssdk.services.s3.model.GetObjectRequest;
-import software.amazon.awssdk.services.s3.model.HeadObjectRequest;
-import software.amazon.awssdk.services.s3.model.HeadObjectResponse;
-import software.amazon.awssdk.services.s3.model.NoSuchKeyException;
-import software.amazon.awssdk.services.s3.model.UploadPartRequest;
+import software.amazon.awssdk.services.s3.model.*;
 import software.amazon.awssdk.services.s3.presigner.S3Presigner;
 import software.amazon.awssdk.services.s3.presigner.model.GetObjectPresignRequest;
 import software.amazon.awssdk.utils.SdkAutoCloseable;
@@ -79,7 +67,7 @@ public class S3OsAttachmentHandler implements AttachmentHandler {
     public Mono<Attachment> upload(UploadContext uploadContext) {
         return Mono.just(uploadContext).filter(context -> this.shouldHandle(context.policy()))
             .flatMap(context -> {
-                final var properties = getProperties(context.configMap());
+                final var properties = S3OsProperties.convertFrom(context.configMap());
                 return upload(context, properties)
                     .subscribeOn(Schedulers.boundedElastic())
                     .map(objectDetail -> this.buildAttachment(properties, objectDetail))
@@ -102,7 +90,7 @@ public class S3OsAttachmentHandler implements AttachmentHandler {
                     log.info("Skip deleting object {} from S3.", objectKey);
                     return Mono.just(context);
                 }
-                var properties = getProperties(deleteContext.configMap());
+                var properties = S3OsProperties.convertFrom(deleteContext.configMap());
                 return Mono.using(() -> buildS3Client(properties),
                         client -> Mono.fromCallable(
                             () -> client.deleteObject(DeleteObjectRequest.builder()
@@ -123,7 +111,7 @@ public class S3OsAttachmentHandler implements AttachmentHandler {
 
     @Override
     public Mono<URI> getSharedURL(Attachment attachment, Policy policy, ConfigMap configMap,
-        Duration ttl) {
+                                  Duration ttl) {
         if (!this.shouldHandle(policy)) {
             return Mono.empty();
         }
@@ -132,7 +120,7 @@ public class S3OsAttachmentHandler implements AttachmentHandler {
             return Mono.error(new IllegalArgumentException(
                 "Cannot obtain object key from attachment " + attachment.getMetadata().getName()));
         }
-        var properties = getProperties(configMap);
+        var properties = S3OsProperties.convertFrom(configMap);
 
         return Mono.using(() -> buildS3Presigner(properties),
                 s3Presigner -> {
@@ -168,8 +156,8 @@ public class S3OsAttachmentHandler implements AttachmentHandler {
             // fallback to default handler for backward compatibility
             return Mono.empty();
         }
-        var properties = getProperties(configMap);
-        var objectURL = getObjectURL(properties, objectKey);
+        var properties = S3OsProperties.convertFrom(configMap);
+        var objectURL = properties.toObjectURL(objectKey);
         var urlSuffix = getUrlSuffixAnnotation(attachment);
         if (StringUtils.isNotBlank(urlSuffix)) {
             objectURL += urlSuffix;
@@ -195,13 +183,8 @@ public class S3OsAttachmentHandler implements AttachmentHandler {
         return annotations.get(URL_SUFFIX_ANNO_KEY);
     }
 
-    S3OsProperties getProperties(ConfigMap configMap) {
-        var settingJson = configMap.getData().getOrDefault("default", "{}");
-        return JsonUtils.jsonToObject(settingJson, S3OsProperties.class);
-    }
-
     Attachment buildAttachment(S3OsProperties properties, ObjectDetail objectDetail) {
-        String externalLink = getObjectURL(properties, objectDetail.uploadState.objectKey);
+        String externalLink = properties.toObjectURL(objectDetail.uploadState.objectKey);
         var urlSuffix = UrlUtils.findUrlSuffix(properties.getUrlSuffixes(),
             objectDetail.uploadState.fileName);
 
@@ -227,22 +210,6 @@ public class S3OsAttachmentHandler implements AttachmentHandler {
         attachment.setSpec(spec);
         log.info("Built attachment {} successfully", objectDetail.uploadState.objectKey);
         return attachment;
-    }
-
-    String getObjectURL(S3OsProperties properties, String objectKey) {
-        String objectURL;
-        if (StringUtils.isBlank(properties.getDomain())) {
-            String host;
-            if (properties.getEnablePathStyleAccess()) {
-                host = properties.getEndpoint() + "/" + properties.getBucket();
-            } else {
-                host = properties.getBucket() + "." + properties.getEndpoint();
-            }
-            objectURL = properties.getProtocol() + "://" + host + "/" + objectKey;
-        } else {
-            objectURL = properties.getProtocol() + "://" + properties.getDomain() + "/" + objectKey;
-        }
-        return UriUtils.encodePath(objectURL, StandardCharsets.UTF_8);
     }
 
     S3Client buildS3Client(S3OsProperties properties) {

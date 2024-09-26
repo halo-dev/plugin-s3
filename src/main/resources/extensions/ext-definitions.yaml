@@ -1,0 +1,9 @@
+apiVersion: plugin.halo.run/v1alpha1
+kind: ExtensionDefinition
+metadata:
+  name: s3os-thumbnail-provider
+spec:
+  className: run.halo.s3os.S3ThumbnailProvider
+  extensionPointName: thumbnail-provider
+  displayName: "S3 协议 OSS 缩略图生成"
+  description: "为上传到支持 S3 协议的 OSS 的图片生成缩略图"

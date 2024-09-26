@@ -1,16 +1,17 @@
 package run.halo.s3os;
 
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import lombok.RequiredArgsConstructor;
 import org.springframework.util.StringUtils;
-
-import java.time.LocalDate;
+import org.springframework.web.util.UriUtils;
+import run.halo.app.extension.ConfigMap;
+import run.halo.app.infra.utils.JsonUtils;
 
 @Data
-class S3OsProperties {
+public class S3OsProperties {
 
     private String bucket;
 
@@ -48,6 +49,8 @@ class S3OsProperties {
     private String region = "Auto";
 
     private List<urlSuffixItem> urlSuffixes;
+
+    private String thumbnailParamPattern;
 
     @Data
     @AllArgsConstructor
@@ -103,19 +106,40 @@ class S3OsProperties {
             if (length >= 4 && length <= 16) {
                 this.randomStringLength = length;
             }
+        } catch (NumberFormatException ignored) {
         }
-        catch (NumberFormatException ignored) { }
     }
 
     public void setRegion(String region) {
         if (!StringUtils.hasText(region)) {
             this.region = "Auto";
-        }else {
+        } else {
             this.region = region;
         }
     }
 
     public void setEndpoint(String endpoint) {
         this.endpoint = UrlUtils.removeHttpPrefix(endpoint);
+    }
+
+    public String toObjectURL(String objectKey) {
+        String objectURL;
+        if (!StringUtils.hasText(this.getDomain())) {
+            String host;
+            if (this.getEnablePathStyleAccess()) {
+                host = this.getEndpoint() + "/" + this.getBucket();
+            } else {
+                host = this.getBucket() + "." + this.getEndpoint();
+            }
+            objectURL = this.getProtocol() + "://" + host + "/" + objectKey;
+        } else {
+            objectURL = this.getProtocol() + "://" + this.getDomain() + "/" + objectKey;
+        }
+        return UriUtils.encodePath(objectURL, StandardCharsets.UTF_8);
+    }
+
+    public static S3OsProperties convertFrom(ConfigMap configMap) {
+        var settingJson = configMap.getData().getOrDefault("default", "{}");
+        return JsonUtils.jsonToObject(settingJson, S3OsProperties.class);
     }
 }
