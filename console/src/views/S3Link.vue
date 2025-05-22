@@ -8,6 +8,7 @@ import {
   VCard,
   VEmpty,
   VEntity,
+  VEntityContainer,
   VEntityField,
   VLoading,
   VModal,
@@ -22,12 +23,16 @@ import { axiosInstance, coreApiClient, type Group } from "@halo-dev/api-client";
 import { S3LinkControllerApi } from "@/api";
 import type { S3ListResult, LinkResultItem, Policy, ObjectVo } from "@/api";
 
-const s3LinkControllerApi = new S3LinkControllerApi(undefined, axiosInstance.defaults.baseURL, axiosInstance);
+const s3LinkControllerApi = new S3LinkControllerApi(
+  undefined,
+  axiosInstance.defaults.baseURL,
+  axiosInstance
+);
 
 const componentInstance = getCurrentInstance();
 const t = (key: string) => {
   // @ts-ignore
-  if (typeof componentInstance?.proxy?.$t === 'function') {
+  if (typeof componentInstance?.proxy?.$t === "function") {
     // @ts-ignore
     return componentInstance.proxy.$t(key);
   }
@@ -38,12 +43,14 @@ const selectedFiles = ref<string[]>([]);
 const policyName = ref<string>("");
 const page = ref(1);
 const size = ref(50);
-const selectedGroup = ref("")
-const policyOptions = ref<{ label: string; value: string; attrs: any }[]>([{
-  label: "请选择存储策略",
-  value: "",
-  attrs: {disabled: true}
-}]);
+const selectedGroup = ref("");
+const policyOptions = ref<{ label: string; value: string; attrs: any }[]>([
+  {
+    label: "请选择存储策略",
+    value: "",
+    attrs: { disabled: true },
+  },
+]);
 const defaultGroup = ref<Group>({
   apiVersion: "",
   kind: "",
@@ -76,13 +83,15 @@ const isFetchingPolicies = ref(true);
 const linkTips = ref("");
 const linkFailedTable = ref<LinkResultItem[]>([]);
 const linkedStatusItems: { label: string; value?: boolean }[] = [
-  {label: "全部"},
-  {label: "未关联", value: true},
+  { label: "全部" },
+  { label: "未关联", value: true },
 ];
 
 // action state
 const checkedAll = ref(false);
-const selectedLinkedStatusItem = ref<boolean | undefined>(linkedStatusItems[0].value);
+const selectedLinkedStatusItem = ref<boolean | undefined>(
+  linkedStatusItems[0].value
+);
 
 const emptyTips = computed(() => {
   if (isFetchingPolicies.value) {
@@ -98,34 +107,37 @@ const emptyTips = computed(() => {
 });
 
 const handleCheckAllChange = (e: Event) => {
-  const {checked} = e.target as HTMLInputElement;
+  const { checked } = e.target as HTMLInputElement;
 
   if (checked) {
     selectedFiles.value =
-      s3Objects.value.objects?.filter(file => !file.isLinked).map((file) => {
-        return file.key || "";
-      }) || [];
+      s3Objects.value.objects
+        ?.filter((file) => !file.isLinked)
+        .map((file) => {
+          return file.key || "";
+        }) || [];
   } else {
     selectedFiles.value.length = 0;
     checkedAll.value = false;
   }
 };
 
-
 const fetchPolicies = async () => {
   try {
-    const {status, data} = await s3LinkControllerApi.listS3Policies();
+    const { status, data } = await s3LinkControllerApi.listS3Policies();
     if (status === 200) {
-      policyOptions.value = [{
-        label: "请选择存储策略",
-        value: "",
-        attrs: {disabled: true}
-      }];
+      policyOptions.value = [
+        {
+          label: "请选择存储策略",
+          value: "",
+          attrs: { disabled: true },
+        },
+      ];
       data.forEach((policy: Policy) => {
         policyOptions.value.push({
           label: policy.spec.displayName,
           value: policy.metadata.name,
-          attrs: {}
+          attrs: {},
         });
       });
     }
@@ -137,7 +149,8 @@ const fetchPolicies = async () => {
 
 const changeNextTokenAndObject = () => {
   s3Objects.value.currentToken = s3Objects.value.nextToken;
-  s3Objects.value.currentContinuationObject = s3Objects.value.nextContinuationObject;
+  s3Objects.value.currentContinuationObject =
+    s3Objects.value.nextContinuationObject;
   s3Objects.value.nextToken = "";
   s3Objects.value.nextContinuationObject = "";
 };
@@ -158,20 +171,28 @@ const fetchObjects = async () => {
   isFetching.value = true;
   s3Objects.value.objects = [];
   try {
-    const {status, data} = await s3LinkControllerApi.listObjects({
+    const { status, data } = await s3LinkControllerApi.listObjects({
       policyName: policyName.value,
       pageSize: size.value,
       continuationToken: s3Objects.value.currentToken,
       continuationObject: s3Objects.value.currentContinuationObject,
       unlinked: selectedLinkedStatusItem.value,
-      filePrefix: filePrefix.value
+      filePrefix: filePrefix.value,
     });
     if (status === 200) {
       s3Objects.value = data;
-      if (s3Objects.value.objects?.length === 0 && s3Objects.value.hasMore && s3Objects.value.nextToken) {
+      if (
+        s3Objects.value.objects?.length === 0 &&
+        s3Objects.value.hasMore &&
+        s3Objects.value.nextToken
+      ) {
         changeNextTokenAndObject();
         await fetchObjects();
-      } else if (s3Objects.value.objects?.length === 0 && !s3Objects.value.hasMore && page.value > 1) {
+      } else if (
+        s3Objects.value.objects?.length === 0 &&
+        !s3Objects.value.hasMore &&
+        page.value > 1
+      ) {
         page.value = 1;
         clearTokenAndObject();
         await fetchObjects();
@@ -200,15 +221,15 @@ const handleLink = async () => {
       policyName: policyName.value,
       objectKeys: selectedFiles.value,
       groupName: selectedGroup.value,
-    }
+    },
   });
   const items = linkResult.data.items || [];
-  const successCount = items.filter(item => item.success).length;
-  const failedCount = items.filter(item => !item.success).length;
+  const successCount = items.filter((item) => item.success).length;
+  const failedCount = items.filter((item) => !item.success).length;
   linkTips.value = `关联成功${successCount}个文件，关联失败${failedCount}个文件`;
 
   if (failedCount > 0) {
-    linkFailedTable.value = items.filter(item => !item.success);
+    linkFailedTable.value = items.filter((item) => !item.success);
   }
   isLinking.value = false;
 };
@@ -245,7 +266,7 @@ const handleModalClose = () => {
 };
 
 const fetchCustomGroups = async () => {
-  const {status, data} = await coreApiClient.storage.group.listGroup({
+  const { status, data } = await coreApiClient.storage.group.listGroup({
     labelSelector: ["!halo.run/hidden"],
     sort: ["metadata.creationTimestamp,asc"],
   });
@@ -260,19 +281,20 @@ onMounted(() => {
 });
 
 watch(selectedFiles, (newValue) => {
-  checkedAll.value = s3Objects.value.objects?.filter(file => !file.isLinked)
-      .filter(file => !newValue.includes(file.key || "")).length === 0
-    && s3Objects.value.objects?.length !== 0;
+  checkedAll.value =
+    s3Objects.value.objects
+      ?.filter((file) => !file.isLinked)
+      .filter((file) => !newValue.includes(file.key || "")).length === 0 &&
+    s3Objects.value.objects?.length !== 0;
 });
 
 watch(selectedLinkedStatusItem, handleFirstPage);
-
 </script>
 
 <template>
   <VPageHeader title="关联S3文件">
     <template #icon>
-      <CarbonFolderDetailsReference class="mr-2 self-center"/>
+      <CarbonFolderDetailsReference class="mr-2 self-center" />
     </template>
   </VPageHeader>
   <div class="m-0 md:m-4">
@@ -285,7 +307,6 @@ watch(selectedLinkedStatusItem, handleFirstPage);
             <div class="hidden items-center sm:flex">
               <input
                 v-model="checkedAll"
-                class="h-4 w-4 rounded border-gray-300 text-indigo-600"
                 type="checkbox"
                 @change="handleCheckAllChange"
               />
@@ -299,14 +320,14 @@ watch(selectedLinkedStatusItem, handleFirstPage);
                 <FormKit
                   id="policyChoose"
                   outer-class="!p-0"
-                  style="min-width: 10rem;"
+                  style="min-width: 10rem"
                   v-model="policyName"
                   name="policyName"
                   type="select"
                   :options="policyOptions"
                   @change="handleFirstPage"
                 ></FormKit>
-                <icon-error-warning v-if="!policyName" class="text-red-500"/>
+                <icon-error-warning v-if="!policyName" class="text-red-500" />
                 <SearchInput
                   v-model="filePrefixBind"
                   v-if="policyName"
@@ -315,9 +336,7 @@ watch(selectedLinkedStatusItem, handleFirstPage);
                 ></SearchInput>
               </div>
               <VSpace v-else>
-                <VButton type="primary" @click="handleLink">
-                  关联
-                </VButton>
+                <VButton type="primary" @click="handleLink"> 关联 </VButton>
               </VSpace>
             </div>
             <VSpace spacing="lg" class="flex-wrap">
@@ -339,8 +358,8 @@ watch(selectedLinkedStatusItem, handleFirstPage);
                   <IconRefreshLine
                     v-tooltip="$t('core.common.buttons.refresh')"
                     :class="{
-                        'animate-spin text-gray-900': isFetching,
-                      }"
+                      'animate-spin text-gray-900': isFetching,
+                    }"
                     class="h-4 w-4 text-gray-600 group-hover:text-gray-900"
                   />
                 </div>
@@ -350,33 +369,35 @@ watch(selectedLinkedStatusItem, handleFirstPage);
         </div>
       </template>
 
-      <VLoading v-if="isFetching"/>
+      <VLoading v-if="isFetching" />
 
       <Transition v-else-if="!s3Objects.objects?.length" appear name="fade">
-        <VEmpty
-          message="空空如也"
-          :title="emptyTips"
-        >
-        </VEmpty>
+        <VEmpty message="空空如也" :title="emptyTips"> </VEmpty>
       </Transition>
 
       <Transition v-else appear name="fade">
-        <ul
-          class="box-border h-full w-full divide-y divide-gray-100"
-          role="list"
-        >
-          <li style="padding: 0.5rem 1rem 0">
-            <span class="ml-1 mb-1 block text-sm text-gray-500">关联后所加入的分组</span>
-            <div class="mb-5 grid grid-cols-2 gap-x-2 gap-y-3 md:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-6">
+        <div class="box-border h-full w-full">
+          <div style="padding: 0.5rem 1rem 0">
+            <span class="ml-1 mb-1 block text-sm text-gray-500">
+              关联后所加入的分组
+            </span>
+            <div
+              class="mb-5 grid grid-cols-2 gap-x-2 gap-y-3 md:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-6"
+            >
               <button
                 type="button"
                 class="inline-flex h-full w-full items-center gap-2 rounded-md border border-gray-200 bg-white px-3 py-2.5 text-sm font-medium text-gray-800 hover:bg-gray-50 hover:shadow-sm"
                 v-for="(group, index) in [defaultGroup, ...customGroups]"
                 :key="index"
-                :class="{ '!bg-gray-100 shadow-sm': group.metadata.name === selectedGroup }"
+                :class="{
+                  '!bg-gray-100 shadow-sm':
+                    group.metadata.name === selectedGroup,
+                }"
                 @click="selectedGroup = group.metadata.name"
               >
-                <div class="inline-flex w-full flex-1 gap-x-2 break-all text-left">
+                <div
+                  class="inline-flex w-full flex-1 gap-x-2 break-all text-left"
+                >
                   <slot name="text">
                     {{ group?.spec.displayName }}
                   </slot>
@@ -395,17 +416,17 @@ watch(selectedLinkedStatusItem, handleFirstPage);
                 </div>
               </button>
             </div>
-          </li>
-          <li v-for="(file, index) in s3Objects.objects" :key="index">
-            <VEntity :is-selected="checkSelection(file)">
-              <template
-                #checkbox
-              >
+          </div>
+          <VEntityContainer>
+            <VEntity
+              v-for="(file, index) in s3Objects.objects"
+              :key="index"
+              :is-selected="checkSelection(file)"
+            >
+              <template #checkbox>
                 <input
                   v-model="selectedFiles"
                   :value="file.key || ''"
-                  class="h-4 w-4 rounded border-gray-300 text-indigo-600"
-                  name="post-checkbox"
                   :disabled="file.isLinked"
                   type="checkbox"
                 />
@@ -429,10 +450,8 @@ watch(selectedLinkedStatusItem, handleFirstPage);
               <template #end>
                 <VEntityField>
                   <template #description>
-                    <VTag :theme="file.isLinked ? 'default':'primary'">
-                      {{
-                        file.isLinked ? '已关联' : '未关联'
-                      }}
+                    <VTag :theme="file.isLinked ? 'default' : 'primary'">
+                      {{ file.isLinked ? "已关联" : "未关联" }}
                     </VTag>
                   </template>
                 </VEntityField>
@@ -448,23 +467,32 @@ watch(selectedLinkedStatusItem, handleFirstPage);
                 </VEntityField>
               </template>
             </VEntity>
-          </li>
-        </ul>
+          </VEntityContainer>
+        </div>
       </Transition>
 
       <template #footer>
         <div class="bg-white sm:flex sm:items-center justify-between">
           <div class="inline-flex items-center gap-5">
-            <span class="text-xs text-gray-500 hidden md:flex">共 {{ s3Objects.objects?.length }} 项数据</span>
-            <span class="text-xs text-gray-500 hidden md:flex">已自动过滤文件夹对象，页面实际显示数量少为正常现象</span>
+            <span class="text-xs text-gray-500 hidden md:flex"
+              >共 {{ s3Objects.objects?.length }} 项数据</span
+            >
+            <span class="text-xs text-gray-500 hidden md:flex"
+              >已自动过滤文件夹对象，页面实际显示数量少为正常现象</span
+            >
           </div>
           <div class="inline-flex items-center gap-5">
             <div class="inline-flex items-center gap-2">
-              <VButton @click="handleFirstPage" :disabled="!policyName">返回第一页</VButton>
+              <VButton @click="handleFirstPage" :disabled="!policyName"
+                >返回第一页</VButton
+              >
 
               <span class="text-sm text-gray-500">第 {{ page }} 页</span>
 
-              <VButton @click="handleNextPage" :disabled="!s3Objects.hasMore || isFetching || !policyName">
+              <VButton
+                @click="handleNextPage"
+                :disabled="!s3Objects.hasMore || isFetching || !policyName"
+              >
                 下一页
               </VButton>
             </div>
@@ -499,11 +527,7 @@ watch(selectedLinkedStatusItem, handleFirstPage);
   >
     <template #footer>
       <VSpace>
-        <VButton
-          :loading="isLinking"
-          type="primary"
-          @click="handleModalClose"
-        >
+        <VButton :loading="isLinking" type="primary" @click="handleModalClose">
           确定
         </VButton>
       </VSpace>
@@ -516,8 +540,12 @@ watch(selectedLinkedStatusItem, handleFirstPage);
           <th class="border border-black font-normal">失败原因</th>
         </tr>
         <tr v-for="failedInfo in linkFailedTable" :key="failedInfo.objectKey">
-          <th class="border border-black font-normal">{{ failedInfo.objectKey }}</th>
-          <th class="border border-black font-normal">{{ failedInfo.message }}</th>
+          <th class="border border-black font-normal">
+            {{ failedInfo.objectKey }}
+          </th>
+          <th class="border border-black font-normal">
+            {{ failedInfo.message }}
+          </th>
         </tr>
       </table>
     </div>
