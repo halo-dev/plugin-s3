@@ -1,30 +1,44 @@
+// TODO Remove the buildscript block when the halo devtools plugin is updated to use ASM 9.5 or later.
+buildscript {
+    dependencies {
+        // force the version of ASM used by the halo devtools plugin
+        classpath('org.ow2.asm:asm:9.8')
+        classpath('org.ow2.asm:asm-commons:9.8')
+    }
+}
+
 plugins {
     id 'java'
-    id "com.github.node-gradle.node" version "5.0.0"
-    id "io.freefair.lombok" version "8.0.1"
-    id "run.halo.plugin.devtools" version "0.0.9"
-    id 'org.openapi.generator' version '7.7.0'
+    id "com.github.node-gradle.node" version "7.1.0"
+    id "io.freefair.lombok" version "8.13.1"
+    id "run.halo.plugin.devtools" version "0.5.0"
+    id 'org.openapi.generator' version '7.12.0'
 }
 
 group 'run.halo.s3os'
 
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+    options.release = 21
+}
+
 java {
-    sourceCompatibility = JavaVersion.VERSION_17
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(21)
+    }
 }
 
 repositories {
     mavenCentral()
-    maven { url 'https://s01.oss.sonatype.org/content/repositories/releases' }
-    maven { url 'https://s01.oss.sonatype.org/content/repositories/snapshots/' }
     maven { url 'https://repo.spring.io/milestone' }
 }
 
 dependencies {
-    implementation platform('run.halo.tools.platform:plugin:2.19.0-SNAPSHOT')
+    implementation platform('run.halo.tools.platform:plugin:2.21.0-alpha.1')
     compileOnly 'run.halo.app:api'
 
-    implementation platform('software.amazon.awssdk:bom:2.19.8')
-    implementation ('software.amazon.awssdk:s3') {
+    implementation platform('software.amazon.awssdk:bom:2.31.58')
+    implementation('software.amazon.awssdk:s3') {
         exclude group: 'org.slf4j'
         exclude group: 'commons-logging'
     }
@@ -32,6 +46,7 @@ dependencies {
     testImplementation 'run.halo.app:api'
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testImplementation 'io.projectreactor:reactor-test'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }
 
 configurations.runtimeClasspath {
@@ -40,7 +55,7 @@ configurations.runtimeClasspath {
 
 
 halo {
-    version = '2.19'
+    version = '2.21.0-alpha.2'
 }
 
 haloPlugin {
@@ -59,21 +74,16 @@ node {
     nodeProjectDir = file("${project.projectDir}/console")
 }
 
-task buildFrontend(type: PnpmTask) {
+tasks.register('buildFrontend', PnpmTask) {
     args = ['build']
+    dependsOn(tasks.named('pnpmInstall'))
 }
 
-tasks.named('buildFrontend') {
-    dependsOn 'pnpmInstall'
+tasks.named('processResources') {
+    dependsOn(tasks.named('buildFrontend'))
 }
 
-build {
-    // build frontend before build
-    tasks.getByName('compileJava').dependsOn('buildFrontend')
-}
-
-
-task downloadOpenApiSpec {
+tasks.register('downloadOpenApiSpec') {
     doLast {
         def url = 'http://localhost:8090/v3/api-docs/plugin-s3'
         def file = layout.buildDirectory.dir("apidocs/openapi.json").get().asFile
@@ -87,11 +97,11 @@ openApiGenerate {
     inputSpec = layout.buildDirectory.dir("apidocs/openapi.json").get().asFile.getAbsolutePath()
     outputDir = "${projectDir}/console/src/api"
     additionalProperties = [
-            useES6: true,
+            useES6                   : true,
             useSingleRequestParameter: true,
-            withSeparateModelsAndApi: true,
-            apiPackage: "api",
-            modelPackage: "models"
+            withSeparateModelsAndApi : true,
+            apiPackage               : "api",
+            modelPackage             : "models"
     ]
     typeMappings = [
             set: "Array"

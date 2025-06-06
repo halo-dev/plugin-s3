@@ -7,11 +7,13 @@ on:
 
 jobs:
   cd:
-    uses: halo-sigs/reusable-workflows/.github/workflows/plugin-cd.yaml@v1
+    uses: halo-sigs/reusable-workflows/.github/workflows/plugin-cd.yaml@v3
     secrets:
-      halo-username: ${{ secrets.HALO_USERNAME }}
-      halo-password: ${{ secrets.HALO_PASSWORD }}
+      halo-pat: ${{ secrets.HALO_PAT }}
     permissions:
       contents: write
     with:
       app-id: app-Qxhpp
+      pnpm-version: 9
+      node-version: 22
+      java-version: 21
