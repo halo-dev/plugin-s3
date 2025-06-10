@@ -1,17 +1,8 @@
-// TODO Remove the buildscript block when the halo devtools plugin is updated to use ASM 9.5 or later.
-buildscript {
-    dependencies {
-        // force the version of ASM used by the halo devtools plugin
-        classpath('org.ow2.asm:asm:9.8')
-        classpath('org.ow2.asm:asm-commons:9.8')
-    }
-}
-
 plugins {
     id 'java'
     id "com.github.node-gradle.node" version "7.1.0"
     id "io.freefair.lombok" version "8.13.1"
-    id "run.halo.plugin.devtools" version "0.5.0"
+    id "run.halo.plugin.devtools" version "0.6.0"
     id 'org.openapi.generator' version '7.12.0'
 }
 
