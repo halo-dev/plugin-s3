@@ -91,13 +91,16 @@ public class S3OsAttachmentHandler implements AttachmentHandler {
                     return Mono.just(context);
                 }
                 var properties = S3OsProperties.convertFrom(deleteContext.configMap());
-                return Mono.using(() -> buildS3Client(properties),
+                return Mono.using(
+                        () -> buildS3Client(properties),
                         client -> Mono.fromCallable(
                             () -> client.deleteObject(DeleteObjectRequest.builder()
                                 .bucket(properties.getBucket())
                                 .key(objectKey)
-                                .build())).subscribeOn(Schedulers.boundedElastic()),
-                        S3Client::close)
+                                .build())),
+                        S3Client::close
+                    )
+                    .subscribeOn(Schedulers.boundedElastic())
                     .doOnNext(response -> {
                         checkResult(response, "delete object");
                         log.info("Delete object {} from bucket {} successfully",
@@ -105,8 +108,10 @@ public class S3OsAttachmentHandler implements AttachmentHandler {
                     })
                     .thenReturn(context);
             })
+            // ignore when the object does not exist
+            .onErrorComplete(NoSuchKeyException.class::isInstance)
             .onErrorMap(S3ExceptionHandler::map)
-            .map(DeleteContext::attachment);
+            .thenReturn(deleteContext.attachment());
     }
 
     @Override
