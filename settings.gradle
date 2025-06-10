@@ -1,6 +1,5 @@
 pluginManagement {
     repositories {
-        maven { url 'https://s01.oss.sonatype.org/content/repositories/snapshots' }
         mavenCentral()
         maven { url 'https://maven.aliyun.com/repository/gradle-plugin' }
         maven { url 'https://maven.aliyun.com/repository/spring-plugin' }
@@ -9,4 +8,3 @@ pluginManagement {
     }
 }
 rootProject.name = 'plugin-s3'
-
