@@ -77,18 +77,19 @@ public class S3OsAttachmentHandler implements AttachmentHandler {
 
     @Override
     public Mono<Attachment> delete(DeleteContext deleteContext) {
-        return Mono.just(deleteContext).filter(context -> this.shouldHandle(context.policy()))
+        return Mono.just(deleteContext)
+            .filter(context -> this.shouldHandle(context.policy()))
             .flatMap(context -> {
                 var objectKey = getObjectKey(context.attachment());
                 if (objectKey == null) {
                     log.warn(
                         "Cannot obtain object key from attachment {}, skip deleting object from S3.",
                         context.attachment().getMetadata().getName());
-                    return Mono.just(context);
+                    return Mono.just(context.attachment());
                 } else if (MetadataUtil.nullSafeAnnotations(context.attachment())
                     .containsKey(SKIP_REMOTE_DELETION_ANNO)) {
                     log.info("Skip deleting object {} from S3.", objectKey);
-                    return Mono.just(context);
+                    return Mono.just(context.attachment());
                 }
                 var properties = S3OsProperties.convertFrom(deleteContext.configMap());
                 return Mono.using(
@@ -106,12 +107,11 @@ public class S3OsAttachmentHandler implements AttachmentHandler {
                         log.info("Delete object {} from bucket {} successfully",
                             objectKey, properties.getBucket());
                     })
-                    .thenReturn(context);
-            })
-            // ignore when the object does not exist
-            .onErrorComplete(NoSuchKeyException.class::isInstance)
-            .onErrorMap(S3ExceptionHandler::map)
-            .thenReturn(deleteContext.attachment());
+                    // ignore when the object does not exist
+                    .onErrorComplete(NoSuchKeyException.class::isInstance)
+                    .onErrorMap(S3ExceptionHandler::map)
+                    .thenReturn(context.attachment());
+            });
     }
 
     @Override
