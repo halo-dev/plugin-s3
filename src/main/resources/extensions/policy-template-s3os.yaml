@@ -16,7 +16,7 @@ spec:
       formSchema:
         - $el: a
           attrs:
-            href: https://github.com/halo-dev/plugin-s3?tab=readme-ov-file#%E9%85%8D%E7%BD%AE%E6%8C%87%E5%8D%97
+            href: https://www.halo.run/store/apps/app-Qxhpp#%E9%85%8D%E7%BD%AE%E6%8C%87%E5%8D%97
             target: _blank
             style: "padding-bottom: 1rem;padding-top:0.5rem;font-size:.875rem;color:#2563eb;"
           children: "查看配置指南"
