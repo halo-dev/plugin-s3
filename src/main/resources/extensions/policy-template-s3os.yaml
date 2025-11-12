@@ -14,6 +14,12 @@ spec:
   forms:
     - group: default
       formSchema:
+        - $el: a
+          attrs:
+            href: https://www.halo.run/store/apps/app-Qxhpp#%E9%85%8D%E7%BD%AE%E6%8C%87%E5%8D%97
+            target: _blank
+            style: "padding-bottom: 1rem;padding-top:0.5rem;font-size:.875rem;color:#2563eb;"
+          children: "查看配置指南"
         - $formkit: verificationForm
           action: "/apis/s3os.halo.run/v1alpha1/policies/s3/validation"
           label: 对象存储验证
@@ -60,8 +66,8 @@ spec:
             - $formkit: text
               name: region
               label: Region
-              placeholder: 如不填写，则默认为"Auto"
-              help: 若Region为Auto无法使用，才需要填写对应Region
+              placeholder: 如不填写，则默认为 Auto
+              help: 若 Region 为 Auto 无法使用，才需要填写对应 Region，Cloudflare R2 需要填写均为小写字母的 auto
             - $formkit: text
               name: location
               label: 上传目录
@@ -132,7 +138,7 @@ spec:
               name: urlSuffixes
               label: 网址后缀
               help: 用于对指定文件类型的网址添加后缀处理参数，优先级从上到下只取第一个匹配项
-              value: [ ]
+              value: []
               min: 0
               children:
                 - $formkit: text
