@@ -25,7 +25,7 @@ repositories {
 }
 
 dependencies {
-    implementation platform('run.halo.tools.platform:plugin:2.21.0-alpha.1')
+    implementation platform('run.halo.tools.platform:plugin:2.22.0-alpha.1')
     compileOnly 'run.halo.app:api'
 
     implementation platform('software.amazon.awssdk:bom:2.31.58')

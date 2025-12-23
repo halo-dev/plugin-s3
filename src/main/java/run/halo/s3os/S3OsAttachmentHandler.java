@@ -1,15 +1,5 @@
 package run.halo.s3os;
 
-import java.net.URI;
-import java.net.URISyntaxException;
-import java.nio.ByteBuffer;
-import java.nio.file.FileAlreadyExistsException;
-import java.time.Duration;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.pf4j.Extension;
@@ -19,17 +9,21 @@ import org.springframework.core.io.buffer.DataBufferUtils;
 import org.springframework.core.io.buffer.DefaultDataBufferFactory;
 import org.springframework.http.MediaType;
 import org.springframework.http.MediaTypeFactory;
+import org.springframework.lang.NonNull;
 import org.springframework.lang.Nullable;
 import org.springframework.web.server.ServerErrorException;
 import org.springframework.web.server.ServerWebInputException;
+import org.springframework.web.util.UriComponentsBuilder;
 import reactor.core.Exceptions;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 import reactor.util.context.Context;
 import reactor.util.retry.Retry;
+import run.halo.app.core.attachment.ThumbnailSize;
 import run.halo.app.core.extension.attachment.Attachment;
 import run.halo.app.core.extension.attachment.Attachment.AttachmentSpec;
+import run.halo.app.core.extension.attachment.Attachment.AttachmentStatus;
 import run.halo.app.core.extension.attachment.Constant;
 import run.halo.app.core.extension.attachment.Policy;
 import run.halo.app.core.extension.attachment.endpoint.AttachmentHandler;
@@ -44,18 +38,47 @@ import software.amazon.awssdk.http.SdkHttpResponse;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.S3Configuration;
-import software.amazon.awssdk.services.s3.model.*;
+import software.amazon.awssdk.services.s3.model.CompleteMultipartUploadRequest;
+import software.amazon.awssdk.services.s3.model.CompletedMultipartUpload;
+import software.amazon.awssdk.services.s3.model.CompletedPart;
+import software.amazon.awssdk.services.s3.model.CreateMultipartUploadRequest;
+import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
+import software.amazon.awssdk.services.s3.model.GetObjectRequest;
+import software.amazon.awssdk.services.s3.model.HeadObjectRequest;
+import software.amazon.awssdk.services.s3.model.HeadObjectResponse;
+import software.amazon.awssdk.services.s3.model.NoSuchKeyException;
+import software.amazon.awssdk.services.s3.model.UploadPartRequest;
 import software.amazon.awssdk.services.s3.presigner.S3Presigner;
 import software.amazon.awssdk.services.s3.presigner.model.GetObjectPresignRequest;
 import software.amazon.awssdk.utils.SdkAutoCloseable;
+
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.nio.ByteBuffer;
+import java.nio.file.FileAlreadyExistsException;
+import java.time.Duration;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Extension
 public class S3OsAttachmentHandler implements AttachmentHandler {
 
     public static final String OBJECT_KEY = "s3os.plugin.halo.run/object-key";
+
     public static final String URL_SUFFIX_ANNO_KEY = "s3os.plugin.halo.run/url-suffix";
+
     public static final String SKIP_REMOTE_DELETION_ANNO = "s3os.plugin.halo.run/skip-remote-deletion";
+
+    private static final MediaType IMAGE_MEDIA_TYPE = MediaType.parseMediaType("image/*");
+
     public static final int MULTIPART_MIN_PART_SIZE = 5 * 1024 * 1024;
 
     /**
@@ -156,18 +179,73 @@ public class S3OsAttachmentHandler implements AttachmentHandler {
         if (!this.shouldHandle(policy)) {
             return Mono.empty();
         }
-        var objectKey = getObjectKey(attachment);
-        if (objectKey == null) {
-            // fallback to default handler for backward compatibility
+        return Mono.justOrEmpty(doGetPermalink(attachment, S3OsProperties.convertFrom(configMap)));
+    }
+
+    @Override
+    public Mono<Map<ThumbnailSize, URI>> getThumbnailLinks(Attachment attachment, Policy policy, ConfigMap configMap) {
+        if (!this.shouldHandle(policy)) {
             return Mono.empty();
         }
         var properties = S3OsProperties.convertFrom(configMap);
+        return Mono.just(doGetThumbnailLinks(attachment, properties));
+    }
+
+    private Optional<URI> doGetPermalink(Attachment attachment, S3OsProperties properties) {
+        var objectKey = getObjectKey(attachment);
+        if (objectKey == null) {
+            // fallback to default handler for backward compatibility
+            return Optional.empty();
+        }
         var objectURL = properties.toObjectURL(objectKey);
         var urlSuffix = getUrlSuffixAnnotation(attachment);
         if (StringUtils.isNotBlank(urlSuffix)) {
             objectURL += urlSuffix;
         }
-        return Mono.just(URI.create(objectURL));
+        return Optional.of(URI.create(objectURL));
+    }
+
+    @NonNull
+    private Map<ThumbnailSize, URI> doGetThumbnailLinks(Attachment attachment, S3OsProperties properties) {
+        // TODO Support configuring media types that support thumbnails
+        var support = Optional.ofNullable(attachment.getSpec().getMediaType())
+            .map(MediaType::parseMediaType)
+            .map(IMAGE_MEDIA_TYPE::isCompatibleWith)
+            .orElse(false);
+        if (!support) {
+            if (log.isDebugEnabled()) {
+                log.debug("Attachment {} media type {} is not compatible with image/*, skip generating thumbnail links",
+                    attachment.getMetadata().getName(), attachment.getSpec().getMediaType());
+            }
+            return Map.of();
+        }
+
+        var thumbnailParamPattern = properties.getThumbnailParamPattern();
+        if (StringUtils.isBlank(thumbnailParamPattern) || !thumbnailParamPattern.contains("{width}")) {
+            return Map.of();
+        }
+        return Optional.ofNullable(attachment.getStatus())
+            .map(AttachmentStatus::getPermalink)
+            .filter(StringUtils::isNotBlank)
+            .map(URI::create)
+            .or(() -> doGetPermalink(attachment, properties))
+            .map(permalink -> Arrays.stream(ThumbnailSize.values())
+                .collect(Collectors.toMap(Function.identity(), size -> {
+                    var thumbnailParam = thumbnailParamPattern.replace("{width}", String.valueOf(size.getWidth()));
+                    var isQueryPattern = thumbnailParam.startsWith("?");
+                    if (isQueryPattern) {
+                        return UriComponentsBuilder.fromUri(permalink)
+                            .query(thumbnailParam.substring(1))
+                            .build(true)
+                            .toUri();
+                    }
+                    return UriComponentsBuilder.fromUri(permalink)
+                        .path(thumbnailParam)
+                        .build(true)
+                        .toUri();
+                }))
+            )
+            .orElse(Map.of());
     }
 
     @Nullable
@@ -213,6 +291,17 @@ public class S3OsAttachmentHandler implements AttachmentHandler {
         var attachment = new Attachment();
         attachment.setMetadata(metadata);
         attachment.setSpec(spec);
+        attachment.setStatus(new AttachmentStatus());
+        doGetPermalink(attachment, properties).ifPresent(permalink ->
+            attachment.getStatus().setPermalink(permalink.toString())
+        );
+        var thumbnails = doGetThumbnailLinks(attachment, properties);
+        var mappedThumbnails = thumbnails.keySet()
+            .stream()
+            .collect(Collectors.toMap(ThumbnailSize::name, size -> thumbnails.get(size).toString()));
+        if (!mappedThumbnails.isEmpty()) {
+            attachment.getStatus().setThumbnails(mappedThumbnails);
+        }
         log.info("Built attachment {} successfully", objectDetail.uploadState.objectKey);
         return attachment;
     }
@@ -369,8 +458,8 @@ public class S3OsAttachmentHandler implements AttachmentHandler {
                 if (uploadingFile.put(uploadState.getUploadingMapKey(),
                     uploadState.getUploadingMapKey()) != null) {
                     return Mono.error(new FileAlreadyExistsException("文件 " + uploadState.objectKey
-                                                                     +
-                                                                     " 已存在，建议更名后重试。[local]"));
+                        +
+                        " 已存在，建议更名后重试。[local]"));
                 }
                 uploadState.needRemoveMapKey = true;
                 // check whether file exists
@@ -388,7 +477,7 @@ public class S3OsAttachmentHandler implements AttachmentHandler {
                             && response.sdkHttpResponse().isSuccessful()) {
                             return Mono.error(
                                 new FileAlreadyExistsException("文件 " + uploadState.objectKey
-                                                               + " 已存在，建议更名后重试。[remote]"));
+                                    + " 已存在，建议更名后重试。[remote]"));
                         } else {
                             return Mono.just(uploadState);
                         }
@@ -463,18 +552,29 @@ public class S3OsAttachmentHandler implements AttachmentHandler {
     }
 
     record ObjectDetail(UploadState uploadState, HeadObjectResponse objectMetadata) {
+
     }
 
     static class UploadState {
+
         final S3OsProperties properties;
+
         final String originalFileName;
+
         String uploadId;
+
         int partCounter;
+
         Map<Integer, CompletedPart> completedParts = new HashMap<>();
+
         int buffered = 0;
+
         String contentType;
+
         String fileName;
+
         String objectKey;
+
         boolean needRemoveMapKey = false;
 
         public UploadState(S3OsProperties properties, String fileName, boolean needRandomJudge) {
