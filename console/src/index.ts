@@ -1,10 +1,7 @@
+import { definePlugin } from "@halo-dev/ui-shared";
 import type { Ref } from "vue";
-import { markRaw } from "vue";
+import { defineAsyncComponent, markRaw } from "vue";
 import CarbonFolderDetailsReference from "~icons/carbon/folder-details-reference";
-import type { Attachment } from "@halo-dev/api-client";
-import { definePlugin } from "@halo-dev/console-shared";
-import S3Link from "./views/S3Link.vue";
-import S3Unlink from "./views/S3Unlink.vue";
 
 export default definePlugin({
   components: {},
@@ -14,7 +11,7 @@ export default definePlugin({
       route: {
         path: "s3-link",
         name: "S3Link",
-        component: S3Link,
+        component: () => import("./views/S3Link.vue"),
         meta: {
           title: "S3 关联",
           description: "提供将 S3 存储桶中的文件关联到 Halo 中的功能。",
@@ -30,20 +27,18 @@ export default definePlugin({
     },
   ],
   extensionPoints: {
-    "attachment:list-item:operation:create": (attachment: Ref<Attachment>) => {
+    "attachment:list-item:operation:create": (attachment: Ref) => {
       return [
         {
           priority: 21,
-          component: markRaw(S3Unlink),
+          component: defineAsyncComponent(() => import("./views/S3Unlink.vue")),
           permissions: ["plugin:s3os:unlink"],
           props: {
             attachment: attachment,
           },
           hidden: !(
             attachment.value.metadata.annotations &&
-            attachment.value.metadata.annotations[
-              "s3os.plugin.halo.run/object-key"
-            ]
+            attachment.value.metadata.annotations["s3os.plugin.halo.run/object-key"]
           ),
         },
       ];
