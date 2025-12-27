@@ -27,8 +27,10 @@ const s3LinkControllerApi = new S3LinkControllerApi(undefined, axiosInstance.def
 
 const componentInstance = getCurrentInstance();
 const t = (key: string) => {
+  // eslint-disable-next-line @typescript-eslint/ban-ts-comment
   // @ts-ignore
   if (typeof componentInstance?.proxy?.$t === "function") {
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
     // @ts-ignore
     return componentInstance.proxy.$t(key);
   }
@@ -40,6 +42,7 @@ const policyName = ref<string>("");
 const page = ref(1);
 const size = ref(50);
 const selectedGroup = ref("");
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const policyOptions = ref<{ label: string; value: string; attrs: any }[]>([
   {
     label: "请选择存储策略",
@@ -274,43 +277,43 @@ watch(selectedLinkedStatusItem, handleFirstPage);
 <template>
   <VPageHeader title="关联S3文件">
     <template #icon>
-      <CarbonFolderDetailsReference class="mr-2 self-center" />
+      <CarbonFolderDetailsReference class=":uno: mr-2 self-center" />
     </template>
   </VPageHeader>
-  <div class="m-0 md:m-4">
+  <div class=":uno: m-0 md:m-4">
     <VCard :body-class="['!p-0']">
       <template #header>
-        <div class="block w-full bg-gray-50 px-4 py-3">
-          <div class="relative flex flex-col flex-wrap items-start gap-4 sm:flex-row sm:items-center">
-            <div class="hidden items-center sm:flex">
+        <div class=":uno: block w-full bg-gray-50 px-4 py-3">
+          <div class=":uno: relative flex flex-col flex-wrap items-start gap-4 sm:flex-row sm:items-center">
+            <div class=":uno: hidden items-center sm:flex">
               <input v-model="checkedAll" type="checkbox" @change="handleCheckAllChange" />
             </div>
-            <div class="flex w-full flex-1 items-center sm:w-auto">
-              <div v-if="!selectedFiles.length" class="flex flex-wrap items-center gap-2">
-                <span class="whitespace-nowrap">存储策略:</span>
+            <div class=":uno: w-full flex flex-1 items-center sm:w-auto">
+              <div v-if="!selectedFiles.length" class=":uno: flex flex-wrap items-center gap-2">
+                <span class=":uno: whitespace-nowrap">存储策略:</span>
                 <FormKit
                   id="policyChoose"
+                  v-model="policyName"
                   outer-class="!p-0"
                   style="min-width: 10rem"
-                  v-model="policyName"
                   name="policyName"
                   type="select"
                   :options="policyOptions"
                   @change="handleFirstPage"
                 ></FormKit>
-                <icon-error-warning v-if="!policyName" class="text-red-500" />
+                <icon-error-warning v-if="!policyName" class=":uno: text-red-500" />
                 <SearchInput
-                  v-model="filePrefixBind"
                   v-if="policyName"
+                  v-model="filePrefixBind"
                   placeholder="请输入文件名前缀搜索"
-                  @update:modelValue="handleFirstPage"
+                  @update:model-value="handleFirstPage"
                 ></SearchInput>
               </div>
               <VSpace v-else>
                 <VButton type="primary" @click="handleLink"> 关联 </VButton>
               </VSpace>
             </div>
-            <VSpace spacing="lg" class="flex-wrap">
+            <VSpace spacing="lg" class=":uno: flex-wrap">
               <FilterCleanButton
                 v-if="selectedLinkedStatusItem != linkedStatusItems[0].value"
                 @click="selectedLinkedStatusItem = linkedStatusItems[0].value"
@@ -321,14 +324,14 @@ watch(selectedLinkedStatusItem, handleFirstPage);
                 :items="linkedStatusItems"
               />
 
-              <div class="flex flex-row gap-2">
-                <div class="group cursor-pointer rounded p-1 hover:bg-gray-200" @click="fetchObjects()">
+              <div class=":uno: flex flex-row gap-2">
+                <div class=":uno: group cursor-pointer rounded p-1 hover:bg-gray-200" @click="fetchObjects()">
                   <IconRefreshLine
                     v-tooltip="$t('core.common.buttons.refresh')"
                     :class="{
-                      'animate-spin text-gray-900': isFetching,
+                      ':uno: animate-spin text-gray-900': isFetching,
                     }"
-                    class="h-4 w-4 text-gray-600 group-hover:text-gray-900"
+                    class=":uno: h-4 w-4 text-gray-600 group-hover:text-gray-900"
                   />
                 </div>
               </div>
@@ -344,21 +347,21 @@ watch(selectedLinkedStatusItem, handleFirstPage);
       </Transition>
 
       <Transition v-else appear name="fade">
-        <div class="box-border h-full w-full">
+        <div class=":uno: box-border h-full w-full">
           <div style="padding: 0.5rem 1rem 0">
-            <span class="ml-1 mb-1 block text-sm text-gray-500"> 关联后所加入的分组 </span>
-            <div class="mb-5 grid grid-cols-2 gap-x-2 gap-y-3 md:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-6">
+            <span class=":uno: mb-1 ml-1 block text-sm text-gray-500"> 关联后所加入的分组 </span>
+            <div class=":uno: grid grid-cols-2 mb-5 gap-x-2 gap-y-3 2xl:grid-cols-6 lg:grid-cols-4 md:grid-cols-3">
               <button
-                type="button"
-                class="inline-flex h-full w-full items-center gap-2 rounded-md border border-gray-200 bg-white px-3 py-2.5 text-sm font-medium text-gray-800 hover:bg-gray-50 hover:shadow-sm"
                 v-for="(group, index) in [defaultGroup, ...customGroups]"
                 :key="index"
+                type="button"
+                class=":uno: h-full w-full inline-flex items-center gap-2 border border-gray-200 rounded-md bg-white px-3 py-2.5 text-sm text-gray-800 font-medium hover:bg-gray-50 hover:shadow-sm"
                 :class="{
-                  '!bg-gray-100 shadow-sm': group.metadata.name === selectedGroup,
+                  ':uno: !bg-gray-100 shadow-sm': group.metadata.name === selectedGroup,
                 }"
                 @click="selectedGroup = group.metadata.name"
               >
-                <div class="inline-flex w-full flex-1 gap-x-2 break-all text-left">
+                <div class=":uno: w-full inline-flex flex-1 gap-x-2 break-all text-left">
                   <slot name="text">
                     {{ group?.spec.displayName }}
                   </slot>
@@ -369,8 +372,8 @@ watch(selectedLinkedStatusItem, handleFirstPage);
                     animate
                   />
                 </div>
-                <div class="flex-none">
-                  <IconCheckboxCircle v-if="group.metadata.name === selectedGroup" class="text-primary" />
+                <div class=":uno: flex-none">
+                  <IconCheckboxCircle v-if="group.metadata.name === selectedGroup" class=":uno: text-primary" />
                 </div>
               </button>
             </div>
@@ -413,32 +416,34 @@ watch(selectedLinkedStatusItem, handleFirstPage);
       </Transition>
 
       <template #footer>
-        <div class="bg-white sm:flex sm:items-center justify-between">
-          <div class="inline-flex items-center gap-5">
-            <span class="text-xs text-gray-500 hidden md:flex">共 {{ s3Objects.objects?.length }} 项数据</span>
-            <span class="text-xs text-gray-500 hidden md:flex">已自动过滤文件夹对象，页面实际显示数量少为正常现象</span>
+        <div class=":uno: justify-between bg-white sm:flex sm:items-center">
+          <div class=":uno: inline-flex items-center gap-5">
+            <span class=":uno: hidden text-xs text-gray-500 md:flex">共 {{ s3Objects.objects?.length }} 项数据</span>
+            <span class=":uno: hidden text-xs text-gray-500 md:flex"
+              >已自动过滤文件夹对象，页面实际显示数量少为正常现象</span
+            >
           </div>
-          <div class="inline-flex items-center gap-5">
-            <div class="inline-flex items-center gap-2">
-              <VButton @click="handleFirstPage" :disabled="!policyName">返回第一页</VButton>
+          <div class=":uno: inline-flex items-center gap-5">
+            <div class=":uno: inline-flex items-center gap-2">
+              <VButton :disabled="!policyName" @click="handleFirstPage">返回第一页</VButton>
 
-              <span class="text-sm text-gray-500">第 {{ page }} 页</span>
+              <span class=":uno: text-sm text-gray-500">第 {{ page }} 页</span>
 
-              <VButton @click="handleNextPage" :disabled="!s3Objects.hasMore || isFetching || !policyName">
+              <VButton :disabled="!s3Objects.hasMore || isFetching || !policyName" @click="handleNextPage">
                 下一页
               </VButton>
             </div>
-            <div class="inline-flex items-center gap-2">
+            <div class=":uno: inline-flex items-center gap-2">
               <select
                 v-model="size"
-                class="h-8 border outline-none rounded-base pr-10 border-solid px-2 text-gray-800 text-sm border-gray-300 page-size-select"
+                class=":uno: rounded-base page-size-select h-8 border border-gray-300 border-solid px-2 pr-10 text-sm text-gray-800 outline-none"
                 @change="handleFirstPage"
               >
                 <option v-for="(sizeOption, index) in [20, 50, 100, 200]" :key="index" :value="sizeOption">
                   {{ sizeOption }}
                 </option>
               </select>
-              <span class="text-sm text-gray-500">条/页</span>
+              <span class=":uno: text-sm text-gray-500">条/页</span>
             </div>
           </div>
         </div>
@@ -458,18 +463,18 @@ watch(selectedLinkedStatusItem, handleFirstPage);
         <VButton :loading="isLinking" type="primary" @click="handleModalClose"> 确定 </VButton>
       </VSpace>
     </template>
-    <div class="flex flex-col">
+    <div class=":uno: flex flex-col">
       {{ linkTips }}
       <table v-if="linkFailedTable.length != 0">
         <tr>
-          <th class="border border-black font-normal">失败对象</th>
-          <th class="border border-black font-normal">失败原因</th>
+          <th class=":uno: border border-black font-normal">失败对象</th>
+          <th class=":uno: border border-black font-normal">失败原因</th>
         </tr>
         <tr v-for="failedInfo in linkFailedTable" :key="failedInfo.objectKey">
-          <th class="border border-black font-normal">
+          <th class=":uno: border border-black font-normal">
             {{ failedInfo.objectKey }}
           </th>
-          <th class="border border-black font-normal">
+          <th class=":uno: border border-black font-normal">
             {{ failedInfo.message }}
           </th>
         </tr>

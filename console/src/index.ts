@@ -1,4 +1,5 @@
 import { definePlugin } from "@halo-dev/ui-shared";
+import "uno.css";
 import type { Ref } from "vue";
 import { defineAsyncComponent, markRaw } from "vue";
 import CarbonFolderDetailsReference from "~icons/carbon/folder-details-reference";
