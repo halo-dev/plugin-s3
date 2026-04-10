@@ -33,6 +33,7 @@ import run.halo.app.extension.MetadataUtil;
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
 import software.amazon.awssdk.awscore.presigner.SdkPresigner;
 import software.amazon.awssdk.core.SdkResponse;
+import software.amazon.awssdk.core.checksums.RequestChecksumCalculation;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.http.SdkHttpResponse;
 import software.amazon.awssdk.regions.Region;
@@ -317,6 +318,7 @@ public class S3OsAttachmentHandler implements AttachmentHandler {
                 .chunkedEncodingEnabled(false)
                 .pathStyleAccessEnabled(properties.getEnablePathStyleAccess())
                 .build())
+            .requestChecksumCalculation(RequestChecksumCalculation.WHEN_REQUIRED)
             .build();
     }
 
