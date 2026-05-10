@@ -50,9 +50,9 @@ spec:
             - $formkit: text
               name: endpoint
               label: EndPoint
-              placeholder: 请填写不带 bucket name 的 Endpoint
+              placeholder: 请填写不带bucket-name的Endpoint
               validation: required
-              help: 协议头请在上方设置，此处无需以 "http://" 或"https://"开头，系统会自动拼接
+              help: 协议头请在上方设置，此处无需以"http://"或"https://"开头，系统会自动拼接
             - $formkit: password
               name: accessKey
               label: Access Key ID
@@ -69,14 +69,17 @@ spec:
               placeholder: 如不填写，则默认为 Auto
               help: 若 Region 为 Auto 无法使用，才需要填写对应 Region，Cloudflare R2 需要填写均为小写字母的 auto
             - $formkit: text
+              name: userAgent
+              label: 自定义User-Agent
+              placeholder: 如Rclone、S3Drive等，留空则使用默认值
+              help: 部分对象存储服务（如中国科技云数据胶囊）会校验请求客户端类型，绑定Rclone应用后此处填`rclone/v1.67.0`即可正常使用
+            - $formkit: text
               name: location
               label: 上传目录
               placeholder: 如不填写，则默认上传到根目录
               help: 支持的占位符请查阅：https://github.com/halo-dev/plugin-s3#上传目录
             - $formkit: select
               name: randomFilenameMode
-              key: randomFilenameMode
-              id: randomFilenameMode
               label: 上传时重命名文件方式
               options:
                 - label: 保留原文件名
@@ -102,13 +105,13 @@ spec:
               label: 随机字母长度
               min: 4
               max: 16
-              if: "$get(randomFilenameMode).value == 'dateWithString' || $get(randomFilenameMode).value == 'datetimeWithString' || $get(randomFilenameMode).value == 'withString' || $get(randomFilenameMode).value == 'string'"
+              if: "$randomFilenameMode == 'dateWithString' || $randomFilenameMode == 'datetimeWithString' || $randomFilenameMode == 'withString' || $randomFilenameMode == 'string'"
               help: 支持4~16位, 默认为8位
             - $formkit: text
               name: customTemplate
               key: customTemplate
               label: 自定义文件名模板
-              if: "$get(randomFilenameMode).value == 'custom'"
+              if: "$randomFilenameMode == 'custom'"
               value: "${origin-filename}"
               help: 支持的占位符请查阅：https://github.com/halo-dev/plugin-s3#自定义文件名模板
             - $formkit: select
@@ -135,7 +138,7 @@ spec:
               name: domain
               label: 绑定域名（CDN域名）
               placeholder: 如不设置，那么将使用 Bucket + EndPoint 作为域名
-              help: 协议头请在上方设置，此处无需以 "http://" 或 "https://" 开头，系统会自动拼接
+              help: 协议头请在上方设置，此处无需以"http://"或"https://"开头，系统会自动拼接
             - $formkit: repeater
               name: urlSuffixes
               label: 网址后缀

@@ -48,6 +48,12 @@ public class S3OsProperties {
 
     private String region = "Auto";
 
+    /**
+     * Custom User-Agent header for S3 requests, optional.
+     * Useful for services that validate client application binding like CSTCloud.
+     */
+    private String userAgent = "";
+
     private List<urlSuffixItem> urlSuffixes;
 
     private String thumbnailParamPattern;
