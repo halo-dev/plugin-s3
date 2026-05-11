@@ -318,7 +318,8 @@ public class S3OsAttachmentHandler implements AttachmentHandler {
                 .pathStyleAccessEnabled(properties.getEnablePathStyleAccess())
                 .build());
         if (StringUtils.isNotBlank(properties.getUserAgent())) {
-            builder.overrideConfiguration(config -> config.putHeader("User-Agent", properties.getUserAgent()));
+            builder.overrideConfiguration(config ->
+                config.putHeader("User-Agent", properties.getUserAgent()));
         }
         return builder.build();
     }
