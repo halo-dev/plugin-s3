@@ -307,7 +307,7 @@ public class S3OsAttachmentHandler implements AttachmentHandler {
     }
 
     S3Client buildS3Client(S3OsProperties properties) {
-        return S3Client.builder()
+        var builder = S3Client.builder()
             .region(Region.of(properties.getRegion()))
             .endpointOverride(
                 URI.create(properties.getEndpointProtocol() + "://" + properties.getEndpoint()))
@@ -316,8 +316,12 @@ public class S3OsAttachmentHandler implements AttachmentHandler {
             .serviceConfiguration(S3Configuration.builder()
                 .chunkedEncodingEnabled(false)
                 .pathStyleAccessEnabled(properties.getEnablePathStyleAccess())
-                .build())
-            .build();
+                .build());
+        if (StringUtils.isNotBlank(properties.getUserAgent())) {
+            builder.overrideConfiguration(config ->
+                config.putHeader("User-Agent", properties.getUserAgent()));
+        }
+        return builder.build();
     }
 
     private S3Presigner buildS3Presigner(S3OsProperties properties) {

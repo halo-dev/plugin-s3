@@ -134,6 +134,12 @@
 * **加随机字母后缀：** 如遇重名，会在文件名后加上4位的随机字母后缀，例如`image.png`会变成`image_abcd.png`。
 * **报错不上传** 如遇重名，会放弃上传，并在用户界面提示 Duplicate filename 错误。
 
+### 自定义 User-Agent
+
+可选配置项，仅当您的 S3 服务提供商要求校验客户端 UA 时填写，默认留空不影响任何原有功能。
+
+> 例如中国科技云数据胶囊要求密钥必须绑定应用，绑定 Rclone 应用后此处需要填写 `rclone/v1.67.0` 才能正常访问。
+
 ## 部分对象存储服务商兼容性
 
 |服务商|文档|兼容访问风格|兼容性|
@@ -151,6 +157,7 @@
 |又拍云|<https://help.upyun.com/knowledge-base/aws-s3%e5%85%bc%e5%ae%b9/>|Virtual Hosted Style / <br>Path Style|✅|
 |自建minio|\-|Path Style|✅|
 |华为云|文档未说明是否兼容，工单反馈不保证兼容性，实际测试可以使用|Virtual Hosted Style|❓|
+|中国科技云数据胶囊|<https://www.cstcloud.cn/product/datacapsule>|Path Style|✅|
 |Ucloud|只支持 8MB 大小的分片，本插件暂不支持<br><https://docs.ucloud.cn/ufile/s3/s3_introduction>|\-|❌|
 
 ## 开发环境
