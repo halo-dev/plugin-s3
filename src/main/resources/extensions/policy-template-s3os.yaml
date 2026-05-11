@@ -72,7 +72,7 @@ spec:
               name: userAgent
               label: 自定义 User-Agent
               placeholder: 如 Rclone、S3Drive 等，留空则使用默认值
-              help: 部分对象存储服务（如中国科技云数据胶囊）会校验请求客户端类型，绑定 Rclone 应用后此处填`rclone/v1.67.0` 即可正常使用
+              help: 部分对象存储服务（如中国科技云数据胶囊）会校验请求客户端类型，绑定 Rclone 应用后此处填 `rclone/v1.67.0` 即可正常使用
             - $formkit: text
               name: location
               label: 上传目录
