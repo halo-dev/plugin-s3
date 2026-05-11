@@ -31,7 +31,7 @@ import run.halo.app.extension.ConfigMap;
 import run.halo.app.extension.ListOptions;
 import run.halo.app.extension.MetadataUtil;
 import run.halo.app.extension.ReactiveExtensionClient;
-import run.halo.app.extension.index.query.QueryFactory;
+import run.halo.app.extension.index.query.Queries;
 import run.halo.app.extension.router.selector.FieldSelector;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.HeadObjectRequest;
@@ -91,7 +91,7 @@ public class S3LinkServiceImpl implements S3LinkService {
                         // 获取已经关联的附件并标记
                         ListOptions listOptions = new ListOptions();
                         listOptions.setFieldSelector(
-                            FieldSelector.of(QueryFactory.equal("spec.policyName", policyName)));
+                            FieldSelector.of(Queries.equal("spec.policyName", policyName)));
                         return client.listAll(Attachment.class, listOptions, Sort.unsorted())
                             .doOnNext(attachment -> {
                                 S3ListResult.ObjectVo objectVo =
@@ -133,7 +133,7 @@ public class S3LinkServiceImpl implements S3LinkService {
                                                           String policyName) {
         ListOptions listOptions = new ListOptions();
         listOptions.setFieldSelector(
-            FieldSelector.of(QueryFactory.equal("spec.policyName", policyName)));
+            FieldSelector.of(Queries.equal("spec.policyName", policyName)));
         return client.listAll(Attachment.class, listOptions, Sort.unsorted())
             .filter(attachment -> StringUtils.isNotBlank(
                 MetadataUtil.nullSafeAnnotations(attachment).get(S3OsAttachmentHandler.OBJECT_KEY))

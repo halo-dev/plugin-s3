@@ -19,6 +19,8 @@ public class S3OsProperties {
 
     private Boolean enablePathStyleAccess = false;
 
+    private Boolean enableChunkedEncoding = false;
+
     private String endpoint;
 
     private String accessKey;

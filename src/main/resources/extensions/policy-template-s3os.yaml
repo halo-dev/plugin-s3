@@ -47,6 +47,16 @@ spec:
                   value: true
               value: false
               validation: required
+            - $formkit: select
+              name: enableChunkedEncoding
+              label: 启用分块传输编码
+              options:
+                - label: 关闭
+                  value: false
+                - label: 开启
+                  value: true
+              value: false
+              help: 反向代理可能会移除 Content-Length 请求头，从而导致签名不一致发生 403 错误，可以尝试开启此选项
             - $formkit: text
               name: endpoint
               label: EndPoint

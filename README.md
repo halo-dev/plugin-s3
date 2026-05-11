@@ -48,6 +48,10 @@
 
 > 例如百度云提供 `s3.bj.bcebos.com` 和 `<bucket-name>.s3.bj.bcebos.com` 两种 Endpoint，请填写`s3.bj.bcebos.com`。
 
+### 启用分块传输编码
+
+默认关闭。若经过反向代理（如 Cloudflare Tunnel、Ingress）导致请求被改为 `Transfer-Encoding: chunked` 并移除 `Content-Length`，服务端签名校验可能不一致而返回 403，可开启该选项以提升兼容性。
+
 ### Access Key & Access Secret
 
 与服务商自己 API 的 Access Key 和 Access Secret 相同，详情查看对应服务商的文档。
