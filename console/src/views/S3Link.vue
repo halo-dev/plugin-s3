@@ -1,7 +1,6 @@
 <script setup lang="ts">
-import type { LinkResultItem, ObjectVo, Policy, S3ListResult } from "@/api";
-import { S3LinkControllerApi } from "@/api";
-import { axiosInstance, coreApiClient, type Group } from "@halo-dev/api-client";
+import { S3LinkControllerApi, type LinkResultItem, type ObjectVo, type S3ListResult } from "@/api/generated";
+import { axiosInstance, coreApiClient, type Group, type Policy } from "@halo-dev/api-client";
 import {
   IconCheckboxCircle,
   IconRefreshLine,

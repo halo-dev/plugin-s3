@@ -1,0 +1,659 @@
+{
+  "openapi" : "3.0.1",
+  "info" : {
+    "title" : "Halo",
+    "version" : "2.24.0"
+  },
+  "servers" : [ {
+    "url" : "http://localhost:45921",
+    "description" : "Generated server url"
+  } ],
+  "security" : [ {
+    "basicAuth" : [ ],
+    "bearerAuth" : [ ]
+  } ],
+  "paths" : {
+    "/apis/s3os.halo.run/v1alpha1/attachments/link" : {
+      "post" : {
+        "operationId" : "addAttachmentRecord",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/LinkRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/LinkResult"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "s-3-link-controller" ]
+      }
+    },
+    "/apis/s3os.halo.run/v1alpha1/attachments/{name}" : {
+      "delete" : {
+        "operationId" : "unlink",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "name",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Attachment"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "s-3-unlink-controller" ]
+      }
+    },
+    "/apis/s3os.halo.run/v1alpha1/objects/{policyName}" : {
+      "get" : {
+        "operationId" : "listObjects",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "policyName",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "in" : "query",
+          "name" : "continuationToken",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "in" : "query",
+          "name" : "continuationObject",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "in" : "query",
+          "name" : "pageSize",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int32"
+          }
+        }, {
+          "in" : "query",
+          "name" : "unlinked",
+          "required" : false,
+          "schema" : {
+            "type" : "boolean",
+            "default" : false
+          }
+        }, {
+          "in" : "query",
+          "name" : "filePrefix",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/S3ListResult"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "s-3-link-controller" ]
+      }
+    },
+    "/apis/s3os.halo.run/v1alpha1/policies/s3" : {
+      "get" : {
+        "operationId" : "listS3Policies",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/Policy"
+                  }
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "s-3-link-controller" ]
+      }
+    },
+    "/apis/s3os.halo.run/v1alpha1/policies/s3/validation" : {
+      "post" : {
+        "operationId" : "validatePolicyConfig",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/S3OsProperties"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "policy-config-validation-controller" ]
+      }
+    }
+  },
+  "components" : {
+    "schemas" : {
+      "AddOperation" : {
+        "required" : [ "op", "path", "value" ],
+        "type" : "object",
+        "properties" : {
+          "op" : {
+            "type" : "string",
+            "enum" : [ "add" ]
+          },
+          "path" : {
+            "pattern" : "^(/[^/~]*(~[01][^/~]*)*)*$",
+            "type" : "string",
+            "description" : "A JSON Pointer path pointing to the location to move/copy from.",
+            "example" : "/a/b/c"
+          },
+          "value" : {
+            "description" : "Value can be any JSON value"
+          }
+        }
+      },
+      "Attachment" : {
+        "required" : [ "apiVersion", "kind", "metadata", "spec" ],
+        "type" : "object",
+        "properties" : {
+          "apiVersion" : {
+            "type" : "string"
+          },
+          "kind" : {
+            "type" : "string"
+          },
+          "metadata" : {
+            "$ref" : "#/components/schemas/Metadata"
+          },
+          "spec" : {
+            "$ref" : "#/components/schemas/AttachmentSpec"
+          },
+          "status" : {
+            "$ref" : "#/components/schemas/AttachmentStatus"
+          }
+        }
+      },
+      "AttachmentSpec" : {
+        "type" : "object",
+        "properties" : {
+          "displayName" : {
+            "type" : "string",
+            "description" : "Display name of attachment"
+          },
+          "groupName" : {
+            "type" : "string",
+            "description" : "Group name"
+          },
+          "mediaType" : {
+            "type" : "string",
+            "description" : "Media type of attachment"
+          },
+          "ownerName" : {
+            "type" : "string",
+            "description" : "Name of User who uploads the attachment"
+          },
+          "policyName" : {
+            "type" : "string",
+            "description" : "Policy name"
+          },
+          "size" : {
+            "minimum" : 0,
+            "type" : "integer",
+            "description" : "Size of attachment. Unit is Byte",
+            "format" : "int64"
+          },
+          "tags" : {
+            "uniqueItems" : true,
+            "type" : "array",
+            "description" : "Tags of attachment",
+            "items" : {
+              "type" : "string",
+              "description" : "Tag name"
+            }
+          }
+        }
+      },
+      "AttachmentStatus" : {
+        "type" : "object",
+        "properties" : {
+          "permalink" : {
+            "type" : "string",
+            "description" : "Permalink of attachment.\nIf it is in local storage, the public URL will be set.\nIf it is in s3 storage, the Object URL will be set.\n"
+          },
+          "thumbnails" : {
+            "type" : "object",
+            "additionalProperties" : {
+              "type" : "string"
+            }
+          }
+        }
+      },
+      "CopyOperation" : {
+        "required" : [ "op", "from", "path" ],
+        "type" : "object",
+        "properties" : {
+          "from" : {
+            "pattern" : "^(/[^/~]*(~[01][^/~]*)*)*$",
+            "type" : "string",
+            "description" : "A JSON Pointer path pointing to the location to move/copy from.",
+            "example" : "/a/b/c"
+          },
+          "op" : {
+            "type" : "string",
+            "enum" : [ "copy" ]
+          },
+          "path" : {
+            "pattern" : "^(/[^/~]*(~[01][^/~]*)*)*$",
+            "type" : "string",
+            "description" : "A JSON Pointer path pointing to the location to move/copy from.",
+            "example" : "/a/b/c"
+          }
+        }
+      },
+      "JsonPatch" : {
+        "minItems" : 1,
+        "uniqueItems" : true,
+        "type" : "array",
+        "description" : "JSON schema for JSONPatch operations",
+        "items" : {
+          "oneOf" : [ {
+            "$ref" : "#/components/schemas/AddOperation"
+          }, {
+            "$ref" : "#/components/schemas/ReplaceOperation"
+          }, {
+            "$ref" : "#/components/schemas/TestOperation"
+          }, {
+            "$ref" : "#/components/schemas/RemoveOperation"
+          }, {
+            "$ref" : "#/components/schemas/MoveOperation"
+          }, {
+            "$ref" : "#/components/schemas/CopyOperation"
+          } ]
+        }
+      },
+      "LinkRequest" : {
+        "type" : "object",
+        "properties" : {
+          "groupName" : {
+            "type" : "string"
+          },
+          "objectKeys" : {
+            "uniqueItems" : true,
+            "type" : "array",
+            "items" : {
+              "type" : "string"
+            }
+          },
+          "policyName" : {
+            "type" : "string"
+          }
+        }
+      },
+      "LinkResult" : {
+        "type" : "object",
+        "properties" : {
+          "items" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/LinkResultItem"
+            }
+          }
+        }
+      },
+      "LinkResultItem" : {
+        "type" : "object",
+        "properties" : {
+          "message" : {
+            "type" : "string"
+          },
+          "objectKey" : {
+            "type" : "string"
+          },
+          "success" : {
+            "type" : "boolean"
+          }
+        }
+      },
+      "Metadata" : {
+        "required" : [ "name" ],
+        "type" : "object",
+        "properties" : {
+          "annotations" : {
+            "type" : "object",
+            "additionalProperties" : {
+              "type" : "string"
+            },
+            "description" : "Annotations are like key-value format."
+          },
+          "creationTimestamp" : {
+            "type" : "string",
+            "description" : "Creation timestamp of the Extension.",
+            "format" : "date-time",
+            "nullable" : true
+          },
+          "deletionTimestamp" : {
+            "type" : "string",
+            "description" : "Deletion timestamp of the Extension.",
+            "format" : "date-time",
+            "nullable" : true
+          },
+          "finalizers" : {
+            "uniqueItems" : true,
+            "type" : "array",
+            "nullable" : true,
+            "items" : {
+              "type" : "string",
+              "nullable" : true
+            }
+          },
+          "generateName" : {
+            "type" : "string",
+            "description" : "The name field will be generated automatically according to the given generateName field"
+          },
+          "labels" : {
+            "type" : "object",
+            "additionalProperties" : {
+              "type" : "string"
+            },
+            "description" : "Labels are like key-value format."
+          },
+          "name" : {
+            "type" : "string",
+            "description" : "Metadata name"
+          },
+          "version" : {
+            "type" : "integer",
+            "description" : "Current version of the Extension. It will be bumped up every update.",
+            "format" : "int64",
+            "nullable" : true
+          }
+        },
+        "description" : "Metadata of Extension."
+      },
+      "MoveOperation" : {
+        "required" : [ "op", "from", "path" ],
+        "type" : "object",
+        "properties" : {
+          "from" : {
+            "pattern" : "^(/[^/~]*(~[01][^/~]*)*)*$",
+            "type" : "string",
+            "description" : "A JSON Pointer path pointing to the location to move/copy from.",
+            "example" : "/a/b/c"
+          },
+          "op" : {
+            "type" : "string",
+            "enum" : [ "move" ]
+          },
+          "path" : {
+            "pattern" : "^(/[^/~]*(~[01][^/~]*)*)*$",
+            "type" : "string",
+            "description" : "A JSON Pointer path pointing to the location to move/copy from.",
+            "example" : "/a/b/c"
+          }
+        }
+      },
+      "ObjectVo" : {
+        "type" : "object",
+        "properties" : {
+          "displayName" : {
+            "type" : "string"
+          },
+          "isLinked" : {
+            "type" : "boolean"
+          },
+          "key" : {
+            "type" : "string"
+          },
+          "lastModified" : {
+            "type" : "string",
+            "format" : "date-time"
+          }
+        }
+      },
+      "Policy" : {
+        "required" : [ "apiVersion", "kind", "metadata", "spec" ],
+        "type" : "object",
+        "properties" : {
+          "apiVersion" : {
+            "type" : "string"
+          },
+          "kind" : {
+            "type" : "string"
+          },
+          "metadata" : {
+            "$ref" : "#/components/schemas/Metadata"
+          },
+          "spec" : {
+            "$ref" : "#/components/schemas/PolicySpec"
+          }
+        }
+      },
+      "PolicySpec" : {
+        "required" : [ "displayName", "templateName" ],
+        "type" : "object",
+        "properties" : {
+          "configMapName" : {
+            "type" : "string",
+            "description" : "Reference name of ConfigMap extension"
+          },
+          "displayName" : {
+            "type" : "string",
+            "description" : "Display name of policy"
+          },
+          "templateName" : {
+            "type" : "string",
+            "description" : "Reference name of PolicyTemplate"
+          }
+        }
+      },
+      "RemoveOperation" : {
+        "required" : [ "op", "path" ],
+        "type" : "object",
+        "properties" : {
+          "op" : {
+            "type" : "string",
+            "enum" : [ "remove" ]
+          },
+          "path" : {
+            "pattern" : "^(/[^/~]*(~[01][^/~]*)*)*$",
+            "type" : "string",
+            "description" : "A JSON Pointer path pointing to the location to move/copy from.",
+            "example" : "/a/b/c"
+          }
+        }
+      },
+      "ReplaceOperation" : {
+        "required" : [ "op", "path", "value" ],
+        "type" : "object",
+        "properties" : {
+          "op" : {
+            "type" : "string",
+            "enum" : [ "replace" ]
+          },
+          "path" : {
+            "pattern" : "^(/[^/~]*(~[01][^/~]*)*)*$",
+            "type" : "string",
+            "description" : "A JSON Pointer path pointing to the location to move/copy from.",
+            "example" : "/a/b/c"
+          },
+          "value" : {
+            "description" : "Value can be any JSON value"
+          }
+        }
+      },
+      "S3ListResult" : {
+        "type" : "object",
+        "properties" : {
+          "currentContinuationObject" : {
+            "type" : "string"
+          },
+          "currentToken" : {
+            "type" : "string"
+          },
+          "hasMore" : {
+            "type" : "boolean"
+          },
+          "nextContinuationObject" : {
+            "type" : "string"
+          },
+          "nextToken" : {
+            "type" : "string"
+          },
+          "objects" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/ObjectVo"
+            }
+          }
+        }
+      },
+      "S3OsProperties" : {
+        "type" : "object",
+        "properties" : {
+          "accessKey" : {
+            "type" : "string"
+          },
+          "accessSecret" : {
+            "type" : "string"
+          },
+          "bucket" : {
+            "type" : "string"
+          },
+          "customTemplate" : {
+            "type" : "string"
+          },
+          "domain" : {
+            "type" : "string"
+          },
+          "duplicateFilenameHandling" : {
+            "type" : "string",
+            "enum" : [ "randomAlphanumeric", "randomAlphabetic", "exception" ]
+          },
+          "enablePathStyleAccess" : {
+            "type" : "boolean"
+          },
+          "endpoint" : {
+            "type" : "string"
+          },
+          "endpointProtocol" : {
+            "type" : "string",
+            "enum" : [ "http", "https" ]
+          },
+          "location" : {
+            "type" : "string"
+          },
+          "protocol" : {
+            "type" : "string",
+            "enum" : [ "http", "https" ]
+          },
+          "randomFilenameMode" : {
+            "type" : "string",
+            "enum" : [ "none", "custom", "uuid", "timestampMs", "dateWithString", "datetimeWithString", "withString", "string", "random_number" ]
+          },
+          "randomStringLength" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "region" : {
+            "type" : "string"
+          },
+          "thumbnailParamPattern" : {
+            "type" : "string"
+          },
+          "urlSuffixes" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/urlSuffixItem"
+            }
+          },
+          "userAgent" : {
+            "type" : "string"
+          }
+        }
+      },
+      "TestOperation" : {
+        "required" : [ "op", "path", "value" ],
+        "type" : "object",
+        "properties" : {
+          "op" : {
+            "type" : "string",
+            "enum" : [ "test" ]
+          },
+          "path" : {
+            "pattern" : "^(/[^/~]*(~[01][^/~]*)*)*$",
+            "type" : "string",
+            "description" : "A JSON Pointer path pointing to the location to move/copy from.",
+            "example" : "/a/b/c"
+          },
+          "value" : {
+            "description" : "Value can be any JSON value"
+          }
+        }
+      },
+      "urlSuffixItem" : {
+        "type" : "object",
+        "properties" : {
+          "fileSuffix" : {
+            "type" : "string"
+          },
+          "urlSuffix" : {
+            "type" : "string"
+          }
+        }
+      }
+    },
+    "securitySchemes" : {
+      "basicAuth" : {
+        "scheme" : "basic",
+        "type" : "http"
+      },
+      "bearerAuth" : {
+        "bearerFormat" : "JWT",
+        "scheme" : "bearer",
+        "type" : "http"
+      }
+    }
+  }
+}

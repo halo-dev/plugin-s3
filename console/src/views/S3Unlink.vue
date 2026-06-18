@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { S3UnlinkControllerApi } from "@/api";
+import { S3UnlinkControllerApi } from "@/api/generated";
 import type { Attachment } from "@halo-dev/api-client";
 import { axiosInstance } from "@halo-dev/api-client";
 import { Dialog, Toast, VDropdownDivider, VDropdownItem } from "@halo-dev/components";

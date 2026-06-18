@@ -1,31 +1,17 @@
 plugins {
     id 'java'
-    id "com.github.node-gradle.node" version "7.1.0"
-    id "io.freefair.lombok" version "8.13.1"
-    id "run.halo.plugin.devtools" version "0.6.0"
-    id 'org.openapi.generator' version '7.12.0'
+    id "io.freefair.lombok" version "9.2.0"
+    id "run.halo.plugin.devtools" version "0.8.0"
 }
 
 group 'run.halo.s3os'
 
-tasks.withType(JavaCompile).configureEach {
-    options.encoding = 'UTF-8'
-    options.release = 21
-}
-
-java {
-    toolchain {
-        languageVersion = JavaLanguageVersion.of(21)
-    }
-}
-
 repositories {
     mavenCentral()
-    maven { url 'https://repo.spring.io/milestone' }
 }
 
 dependencies {
-    implementation platform('run.halo.tools.platform:plugin:2.22.0-alpha.1')
+    implementation platform('run.halo.tools.platform:plugin:2.24.0')
     compileOnly 'run.halo.app:api'
 
     implementation platform('software.amazon.awssdk:bom:2.31.58')
@@ -35,8 +21,8 @@ dependencies {
     }
 
     testImplementation 'run.halo.app:api'
-    testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testImplementation 'io.projectreactor:reactor-test'
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }
 
@@ -44,57 +30,57 @@ configurations.runtimeClasspath {
     exclude group: 'org.reactivestreams', module: 'reactive-streams'
 }
 
-
-halo {
-    version = '2.22'
-}
-
-haloPlugin {
-    watchDomains {
-        consoleSource {
-            files files('console/src/')
-        }
-    }
-}
-
 test {
     useJUnitPlatform()
 }
 
-node {
-    nodeProjectDir = file("${project.projectDir}/console")
-}
-
-tasks.register('buildFrontend', PnpmTask) {
-    args = ['build']
-    dependsOn(tasks.named('pnpmInstall'))
-}
-
-tasks.named('processResources') {
-    dependsOn(tasks.named('buildFrontend'))
-}
-
-tasks.register('downloadOpenApiSpec') {
-    doLast {
-        def url = 'http://localhost:8090/v3/api-docs/plugin-s3'
-        def file = layout.buildDirectory.dir("apidocs/openapi.json").get().asFile
-        file.parentFile.mkdirs()
-        file.text = new URL(url).text
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(21)
     }
 }
 
-openApiGenerate {
-    generatorName = "typescript-axios"
-    inputSpec = layout.buildDirectory.dir("apidocs/openapi.json").get().asFile.getAbsolutePath()
-    outputDir = "${projectDir}/console/src/api"
-    additionalProperties = [
-            useES6                   : true,
-            useSingleRequestParameter: true,
-            withSeparateModelsAndApi : true,
-            apiPackage               : "api",
-            modelPackage             : "models"
-    ]
-    typeMappings = [
-            set: "Array"
-    ]
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = "UTF-8"
+    options.release = 21
+}
+
+tasks.register('processUiResources', Copy) {
+    from project(':console').layout.buildDirectory.dir('dist')
+    into layout.buildDirectory.dir('resources/main/console')
+    dependsOn project(':console').tasks.named('assemble')
+    shouldRunAfter tasks.named('processResources')
+}
+
+tasks.named('classes') {
+    dependsOn tasks.named('processUiResources')
+}
+
+tasks.named('generatePluginComponentsIdx') {
+    notCompatibleWithConfigurationCache('This task invokes "Task.project" at execution time, which is not supported with configuration cache.')
+}
+
+halo {
+    version = '2.24'
+}
+
+
+haloPlugin {
+    openApi {
+        outputDir = file("$rootDir/api-docs/openapi/v3_0")
+        groupingRules {
+            s3V1alpha1Api {
+                displayName = 'Extension API for S3 Plugin'
+                pathsToMatch = [
+                    '/apis/s3os.halo.run/v1alpha1/**',
+                ]
+            }
+        }
+        groupedApiMappings = [
+                '/v3/api-docs/s3V1alpha1Api': 's3V1alpha1Api.json'
+        ]
+        generator {
+            outputDir = file("${projectDir}/console/src/api/generated")
+        }
+    }
 }
