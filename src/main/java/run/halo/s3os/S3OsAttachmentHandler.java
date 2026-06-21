@@ -32,6 +32,7 @@ import run.halo.app.extension.Metadata;
 import run.halo.app.extension.MetadataUtil;
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
 import software.amazon.awssdk.awscore.presigner.SdkPresigner;
+import software.amazon.awssdk.core.checksums.RequestChecksumCalculation;
 import software.amazon.awssdk.core.SdkResponse;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.http.SdkHttpResponse;
@@ -309,6 +310,7 @@ public class S3OsAttachmentHandler implements AttachmentHandler {
     S3Client buildS3Client(S3OsProperties properties) {
         var builder = S3Client.builder()
             .region(Region.of(properties.getRegion()))
+            .requestChecksumCalculation(RequestChecksumCalculation.WHEN_REQUIRED)
             .endpointOverride(
                 URI.create(properties.getEndpointProtocol() + "://" + properties.getEndpoint()))
             .credentialsProvider(() -> AwsBasicCredentials.create(properties.getAccessKey(),

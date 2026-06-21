@@ -1,5 +1,7 @@
 package run.halo.s3os;
 
+import com.sun.net.httpserver.Headers;
+import com.sun.net.httpserver.HttpServer;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.core.io.buffer.DataBuffer;
@@ -11,11 +13,15 @@ import run.halo.app.core.extension.attachment.Attachment;
 import run.halo.app.core.extension.attachment.Policy;
 import run.halo.app.extension.ConfigMap;
 import run.halo.app.extension.Metadata;
+import software.amazon.awssdk.core.sync.RequestBody;
+import software.amazon.awssdk.services.s3.model.UploadPartRequest;
 
+import java.net.InetSocketAddress;
 import java.net.URI;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -47,6 +53,47 @@ class S3OsAttachmentHandlerTest {
 
         // policy is null
         assertFalse(handler.shouldHandle(null));
+    }
+
+    @Test
+    void buildS3ClientShouldNotSendOptionalChecksumHeadersForUploadPart() throws Exception {
+        var headersRef = new AtomicReference<Headers>();
+        var server = HttpServer.create(new InetSocketAddress("localhost", 0), 0);
+        server.createContext("/", exchange -> {
+            headersRef.set(exchange.getRequestHeaders());
+            exchange.getRequestBody().transferTo(java.io.OutputStream.nullOutputStream());
+            exchange.getResponseHeaders().add("ETag", "\"etag\"");
+            exchange.sendResponseHeaders(200, -1);
+            exchange.close();
+        });
+        server.start();
+        try {
+            var properties = new S3OsProperties();
+            properties.setBucket("bucket");
+            properties.setEndpointProtocol(S3OsProperties.Protocol.http);
+            properties.setEndpoint("localhost:" + server.getAddress().getPort());
+            properties.setAccessKey("access-key");
+            properties.setAccessSecret("secret-key");
+            properties.setRegion("us-east-1");
+            properties.setEnablePathStyleAccess(true);
+
+            try (var client = handler.buildS3Client(properties)) {
+                client.uploadPart(UploadPartRequest.builder()
+                        .bucket(properties.getBucket())
+                        .key("halo.txt")
+                        .uploadId("upload-id")
+                        .partNumber(1)
+                        .contentLength(5L)
+                        .build(),
+                    RequestBody.fromString("hello"));
+            }
+
+            var headers = headersRef.get();
+            assertFalse(hasHeader(headers, "x-amz-sdk-checksum-algorithm"));
+            assertFalse(hasHeader(headers, "x-amz-checksum-crc32"));
+        } finally {
+            server.stop(0);
+        }
     }
 
     @Test
@@ -207,6 +254,10 @@ class S3OsAttachmentHandlerTest {
         attachment.setStatus(new Attachment.AttachmentStatus());
         attachment.getStatus().setPermalink(permalink);
         return attachment;
+    }
+
+    private static boolean hasHeader(Headers headers, String name) {
+        return headers.keySet().stream().anyMatch(name::equalsIgnoreCase);
     }
 
 }
