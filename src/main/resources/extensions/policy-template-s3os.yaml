@@ -66,8 +66,8 @@ spec:
             - $formkit: text
               name: region
               label: Region
-              placeholder: 如不填写，则默认为 Auto
-              help: 若 Region 为 Auto 无法使用，才需要填写对应 Region，Cloudflare R2 需要填写均为小写字母的 auto
+              placeholder: 如不填写，则默认为 us-east-1
+              help: 请根据服务商实际情况填写。若不明确服务商区域，可以尝试填写 us-east-1 或 auto；不填写时默认为 us-east-1
             - $formkit: text
               name: userAgent
               label: 自定义 User-Agent

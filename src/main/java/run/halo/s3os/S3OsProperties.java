@@ -46,7 +46,7 @@ public class S3OsProperties {
     private String domain;
 
 
-    private String region = "Auto";
+    private String region = "us-east-1";
 
     /**
      * Custom User-Agent header for S3 requests, optional.
@@ -118,7 +118,7 @@ public class S3OsProperties {
 
     public void setRegion(String region) {
         if (!StringUtils.hasText(region)) {
-            this.region = "Auto";
+            this.region = "us-east-1";
         } else {
             this.region = region;
         }
