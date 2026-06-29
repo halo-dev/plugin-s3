@@ -63,6 +63,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
@@ -78,7 +79,14 @@ public class S3OsAttachmentHandler implements AttachmentHandler {
 
     public static final String SKIP_REMOTE_DELETION_ANNO = "s3os.plugin.halo.run/skip-remote-deletion";
 
-    private static final MediaType IMAGE_MEDIA_TYPE = MediaType.parseMediaType("image/*");
+    private static final Set<String> SUPPORTED_THUMBNAIL_IMAGE_SUFFIXES =
+        Set.of("jpg", "jpeg", "png", "bmp", "wbmp");
+
+    private static final Set<MediaType> SUPPORTED_THUMBNAIL_IMAGE_MEDIA_TYPES =
+        Set.of("image/jpg", "image/jpeg", "image/png", "image/bmp", "image/vnd.wap.wbmp")
+            .stream()
+            .map(MediaType::parseMediaType)
+            .collect(Collectors.toSet());
 
     public static final int MULTIPART_MIN_PART_SIZE = 5 * 1024 * 1024;
 
@@ -208,14 +216,9 @@ public class S3OsAttachmentHandler implements AttachmentHandler {
 
     @NonNull
     private Map<ThumbnailSize, URI> doGetThumbnailLinks(Attachment attachment, S3OsProperties properties) {
-        // TODO Support configuring media types that support thumbnails
-        var support = Optional.ofNullable(attachment.getSpec().getMediaType())
-            .map(MediaType::parseMediaType)
-            .map(IMAGE_MEDIA_TYPE::isCompatibleWith)
-            .orElse(false);
-        if (!support) {
+        if (!isSupportedThumbnailImage(attachment)) {
             if (log.isDebugEnabled()) {
-                log.debug("Attachment {} media type {} is not compatible with image/*, skip generating thumbnail links",
+                log.debug("Attachment {} media type {} is not supported, skip generating thumbnail links",
                     attachment.getMetadata().getName(), attachment.getSpec().getMediaType());
             }
             return Map.of();
@@ -247,6 +250,33 @@ public class S3OsAttachmentHandler implements AttachmentHandler {
                 }))
             )
             .orElse(Map.of());
+    }
+
+    private boolean isSupportedThumbnailImage(Attachment attachment) {
+        return Optional.ofNullable(attachment.getSpec().getMediaType())
+            .map(MediaType::parseMediaType)
+            .map(S3OsAttachmentHandler::isSupportedThumbnailImage)
+            .filter(Boolean::booleanValue)
+            .or(() -> Optional.ofNullable(attachment.getStatus())
+                .map(AttachmentStatus::getPermalink)
+                .filter(StringUtils::isNotBlank)
+                .map(permalink -> URI.create(permalink).getPath())
+                .map(org.springframework.util.StringUtils::getFilenameExtension)
+                .map(S3OsAttachmentHandler::isSupportedThumbnailImage)
+                .filter(Boolean::booleanValue))
+            .isPresent();
+    }
+
+    private static boolean isSupportedThumbnailImage(MediaType mediaType) {
+        return SUPPORTED_THUMBNAIL_IMAGE_MEDIA_TYPES.stream()
+            .anyMatch(supported -> supported.isCompatibleWith(mediaType));
+    }
+
+    private static boolean isSupportedThumbnailImage(String fileSuffix) {
+        if (StringUtils.isBlank(fileSuffix)) {
+            return false;
+        }
+        return SUPPORTED_THUMBNAIL_IMAGE_SUFFIXES.contains(fileSuffix.toLowerCase());
     }
 
     @Nullable

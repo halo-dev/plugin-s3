@@ -241,6 +241,27 @@ class S3OsAttachmentHandlerTest {
             .verifyComplete();
     }
 
+    @Test
+    void shouldGetEmptyThumbnailsIfImageTypeIsUnsupported() {
+        var attachment = createAttachment("image/svg+xml", "https://s3.halo.run/halo.svg");
+
+        var policy = new Policy();
+        policy.setSpec(new Policy.PolicySpec());
+        policy.getSpec().setTemplateName("s3os");
+
+        var configMap = new ConfigMap();
+        configMap.setData(new HashMap<>());
+        configMap.getData().put("default", """
+            {
+              "thumbnailParamPattern": "!path/width/{width}"
+            }
+            """);
+        handler.getThumbnailLinks(attachment, policy, configMap)
+            .as(StepVerifier::create)
+            .expectNext(Map.of())
+            .verifyComplete();
+    }
+
     static Attachment createAttachment(String permalink) {
         return createAttachment("image/png", permalink);
     }
